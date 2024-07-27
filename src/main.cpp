@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 #include <iostream>
 #include <vector>
 enum OPCODE { OP_RETURN, OP_CONSTANT, OP_CONSTANT_LONG };
@@ -37,6 +38,13 @@ struct Chunk {
       lines.push_back({size, line});
     }
   }
+
+  void writeChunk(std::initializer_list<std::uint8_t> instruction, int line) {
+    for (auto &byte : instruction) {
+      writeChunk(byte, line);
+    }
+  }
+
   void disassembleChunk() {
     int i = 0;
     while (i < code.size()) {
@@ -102,6 +110,14 @@ int main(int argv, char *argc[]) {
   int index = chunk.addConstant(c);
   chunk.writeChunk(OP_CONSTANT, 123);
   chunk.writeChunk(index, 123);
-  chunk.writeChunk(OP_RETURN, 123);
+  chunk.writeChunk(OP_CONSTANT_LONG, 124);
+  constant c1 = {100};
+  constant c2 = {200};
+  int cons1 = chunk.addConstant(c1);
+  int cons2 = chunk.addConstant(c2);
+  chunk.writeChunk(
+      {static_cast<unsigned char>(cons1), static_cast<unsigned char>(cons2)},
+      123);
+  chunk.writeChunk(OP_RETURN, 124);
   chunk.disassembleChunk();
 };

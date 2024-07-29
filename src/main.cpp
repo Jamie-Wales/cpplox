@@ -7,7 +7,7 @@
 enum OPCODE { OP_RETURN, OP_CONSTANT, OP_CONSTANT_LONG };
 
 struct constant {
-  std::double_t value;
+  double value;
   void print() { std::printf("%g", value); }
 };
 
@@ -16,17 +16,30 @@ struct lineStart {
   int lineNumber;
 };
 
-struct Chunk {
+class Chunk {
+public:
   std::vector<std::uint8_t> code;
   std::vector<constant> pool;
   std::vector<lineStart> lines;
   Chunk(size_t chunkSize = 0) {
     code = {};
-    code.resize(chunkSize);
+    code.reserve(chunkSize);
     pool = {};
-    pool.resize(chunkSize);
+    pool.reserve(chunkSize);
     lines = {};
-    lines.resize(chunkSize);
+    lines.reserve(chunkSize);
+  }
+  void writeConstant(double value, int line) {
+    int index = addConstant({value});
+    if (index < 256) {
+      writeChunk(OP_CONSTANT, line);
+      writeChunk(index, line);
+    } else {
+      writeChunk(OP_CONSTANT_LONG, line);
+      writeChunk((index & 0xff), line);
+      writeChunk(((index >> 8) & 0xff), line);
+      writeChunk(((index >> 16) & 0xff), line);
+    }
   }
   void writeChunk(std::uint8_t byte, int line) {
     code.push_back(byte);
@@ -36,12 +49,6 @@ struct Chunk {
     if (itr == lines.end()) {
       int size = code.size() - 1;
       lines.push_back({size, line});
-    }
-  }
-
-  void writeChunk(std::initializer_list<std::uint8_t> instruction, int line) {
-    for (auto &byte : instruction) {
-      writeChunk(byte, line);
     }
   }
 
@@ -58,11 +65,15 @@ struct Chunk {
 
 private:
   void printLineNumber(int offset) {
-    for (auto &line : lines)
-      if (offset == 0 || lines[offset].start == offset)
+    for (auto &line : lines) {
+      if (offset == 0 || lines[offset].start == offset) {
         std::printf("%4d ", lines[offset].lineNumber);
-      else
+        return;
+      } else {
         std::printf("   | ");
+        return;
+      }
+    }
   }
 
   int disassembleInstruction(int offset) {
@@ -84,15 +95,15 @@ private:
 
   int constantInstruction(std::string name, int offset) {
     uint8_t constant = code[offset + 1];
-    std::printf("%-16s %4d '", name.c_str(), constant);
+    std::printf("%-8s %4d '", name.c_str(), constant);
     pool[constant].print();
     std::cout << "'" << std::endl;
     return offset + 2;
   }
 
   int constantLongInstruction(std::string name, int offset) {
-    uint8_t constant = code[offset + 1];
-    std::printf("%-16s %4d '", name.c_str(), constant);
+    uint16_t constant = code[offset + 1] + code[offset + 2];
+    std::printf("%-8s %8d '", name.c_str(), constant);
     pool[constant].print();
     std::cout << "'" << std::endl;
     return offset + 3;
@@ -105,19 +116,9 @@ private:
 };
 
 int main(int argv, char *argc[]) {
-  auto chunk = Chunk{};
-  constant c = {1.2};
-  int index = chunk.addConstant(c);
-  chunk.writeChunk(OP_CONSTANT, 123);
-  chunk.writeChunk(index, 123);
-  chunk.writeChunk(OP_CONSTANT_LONG, 124);
-  constant c1 = {100};
-  constant c2 = {200};
-  int cons1 = chunk.addConstant(c1);
-  int cons2 = chunk.addConstant(c2);
-  chunk.writeChunk(
-      {static_cast<unsigned char>(cons1), static_cast<unsigned char>(cons2)},
-      123);
-  chunk.writeChunk(OP_RETURN, 124);
+  auto chunk = Chunk{100};
+  chunk.writeConstant(1000, 0);
+  chunk.writeConstant(2500, 1);
+  chunk.writeChunk(OP_RETURN, 3);
   chunk.disassembleChunk();
 };

@@ -1,4 +1,7 @@
 #include "Chunk.h"
+#include "vMachine.h"
+
+vMachine jamievm;
 
 int main(int argv, char *argc[]) {
   auto chunk = Chunk{100};

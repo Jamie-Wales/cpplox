@@ -3,9 +3,19 @@
 #include <cstddef>
 #include <cstdio>
 #include <vector>
+
 class Chunk {
 public:
-  Chunk(size_t chunkSize = 0) {
+  std::vector<u_int8_t> code;
+  std::vector<constant> pool;
+  Chunk() = default;
+  Chunk(Chunk &&) = default;
+  Chunk(const Chunk &) = default;
+  Chunk &operator=(Chunk &&) = default;
+  Chunk &operator=(const Chunk &) = default;
+  ~Chunk() = default;
+
+  Chunk(size_t chunkSize) {
     code = {};
     code.reserve(chunkSize);
     pool = {};
@@ -14,7 +24,7 @@ public:
     lines.reserve(chunkSize);
   }
   void writeConstant(double value, int line);
-  void writeChunk(int byte, int line);
+  void writeChunk(u_int8_t byte, int line);
   void disassembleChunk() {
     int i = 0;
     while (i < code.size()) {
@@ -23,11 +33,9 @@ public:
   }
 
 private:
-  std::vector<std::uint8_t> code;
-  std::vector<constant> pool;
   std::vector<lineStart> lines;
   // #TODO fix me
-  void printLineNumber(int offset) {
+  void printLineNumber(u_int8_t offset) {
     for (auto &line : lines) {
       if (offset == 0 || lines[offset].start == offset) {
         std::printf("%4d ", lines[offset].lineNumber);

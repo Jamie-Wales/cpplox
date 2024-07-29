@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <string>
+#include <sys/_types/_u_int8_t.h>
 
 void Chunk::writeConstant(double value, int line) {
   int index = addConstant({value});
@@ -15,7 +16,7 @@ void Chunk::writeConstant(double value, int line) {
     writeChunk(((index >> 16) & 0xff), line);
   }
 }
-void Chunk::writeChunk(int byte, int line) {
+void Chunk::writeChunk(u_int8_t byte, int line) {
   code.push_back(byte);
   auto itr = std::find_if(lines.begin(), lines.end(), [line](auto &element) {
     return element.lineNumber == line;

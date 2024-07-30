@@ -3,10 +3,11 @@
 
 vMachine jamievm;
 
-int main(int argv, char *argc[]) {
-  auto chunk = Chunk{100};
-  chunk.writeConstant(1000, 0);
-  chunk.writeConstant(2500, 1);
-  chunk.writeChunk(OP_RETURN, 3);
-  chunk.disassembleChunk();
+int main(int argv, char* argc[])
+{
+    auto chunk = Chunk { 100 };
+    for (int i = 0; i < 300; i++) {
+        chunk.writeConstant(1000 + i, 0 + i);
+    }
+    chunk.disassembleChunk();
 };

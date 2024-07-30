@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.10)
+project(vm)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include_directories(include)
+
+# Your project's source files
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+
+# Add executable
+add_executable(vm ${SOURCES})
+
+add_compile_options(-Wall -Wextra -Wpedantic)
+
+# Link libraries

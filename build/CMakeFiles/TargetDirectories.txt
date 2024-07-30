@@ -1,3 +1,0 @@
-/Users/jamie/dev/vm/cpplox/build/CMakeFiles/vm.dir
-/Users/jamie/dev/vm/cpplox/build/CMakeFiles/edit_cache.dir
-/Users/jamie/dev/vm/cpplox/build/CMakeFiles/rebuild_cache.dir

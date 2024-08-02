@@ -1,13 +1,12 @@
-#include "Chunk.h"
 #include "vMachine.h"
 
-vMachine jamievm;
+int main(int argc, char *argv[]) {
+  auto chunk = Chunk{100};
+  for (int i = 0; i < 3; i++) {
+    chunk.writeConstant(i, i);
+  }
+  vMachine jvm{chunk};
+  jvm.run();
 
-int main(int argv, char* argc[])
-{
-    auto chunk = Chunk { 100 };
-    for (int i = 0; i < 300; i++) {
-        chunk.writeConstant(1000 + i, 0 + i);
-    }
-    chunk.disassembleChunk();
-};
+  return 0;
+}

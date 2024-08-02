@@ -50,6 +50,13 @@ void vMachine::run() {
       stack.push(constant.value);
       break;
     }
+
+    case ADD:
+    case SUB:
+    case MULT:
+    case DIV:
+    case NEG:
+
     default:
       std::cerr << "Unknown opcode: " << static_cast<int>(byte) << std::endl;
       return;

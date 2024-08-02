@@ -1,6 +1,6 @@
 #pragma once
 
-enum OP_CODE { CONSTANT, CONSTANT_LONG, RETURN };
+enum OP_CODE { ADD, SUB, MULT, DIV, NEG, CONSTANT, CONSTANT_LONG, RETURN };
 
 struct constant {
   double value;

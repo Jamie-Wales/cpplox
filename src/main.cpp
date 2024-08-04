@@ -1,73 +1,50 @@
-#include "Instructions.h"
-#include "vMachine.h"
+#include "Scanner.h"
+#include <Tests.h>
+#include <fstream>
 #include <iostream>
+#include <string>
 
-void runTest(const std::string& testName, Chunk& chunk, double expectedResult)
+std::string readFile(const std::string& path)
 {
-    std::cout << "Running test: " << testName << std::endl;
-    vMachine vm(chunk);
-    vm.run();
-    std::cout << "Test " << testName << " " << expectedResult << std::endl;
-    std::cout << "------------------------" << std::endl;
+    std::ifstream inputFileStream(path);
+    std::string parsed_file = { std::istreambuf_iterator<char>(inputFileStream),
+        std::istreambuf_iterator<char>() };
+    return parsed_file;
 }
-int main()
+
+void runFile(std::string path)
 {
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(1.0, 1);
-        chunk.writeConstant(2.0, 1);
-        chunk.writeChunk(OP_CODE::ADD, 1);
-        chunk.writeChunk(OP_CODE::RETURN, 1);
-        runTest("Simple Addition", chunk, 3.0);
+    std::string source = readFile(path);
+    Scanner scanner { source };
+    auto tokens = scanner.tokenize();
+    for (auto& token : tokens) {
+        std::cout << token.lexeme << std::endl;
     }
+}
 
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(5.0, 1);
-        chunk.writeConstant(3.0, 1);
-        chunk.writeChunk(OP_CODE::SUB, 1);
-        chunk.writeChunk(OP_CODE::RETURN, 1);
-        runTest("Subtraction", chunk, 2.0);
+void repl()
+{
+    std::string line;
+    while (true) {
+        std::cout << "> ";
+        if (!std::getline(std::cin, line)) {
+            std::cout << '\n';
+            break;
+        }
+
+        std::cout << line << std::endl;
     }
+}
 
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(4.0, 1);
-        chunk.writeConstant(3.0, 1);
-        chunk.writeChunk(OP_CODE::MULT, 1);
-        chunk.writeChunk(OP_CODE::RETURN, 1);
-        runTest("Multiplication", chunk, 12.0);
+int main(int argc, char* argv[])
+{
+    test();
+    if (argc == 1) {
+        repl();
+    } else if (argc == 2) {
+        runFile(argv[1]);
+    } else {
+        std::cout << "Usage vm [script] || vm" << std::endl;
     }
-
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(10.0, 1);
-        chunk.writeConstant(2.0, 1);
-        chunk.writeChunk(OP_CODE::DIV, 1);
-        chunk.writeChunk(OP_CODE::RETURN, 1);
-        runTest("Division", chunk, 5.0);
-    }
-
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(5.0, 1);
-        chunk.writeChunk(OP_CODE::NEG, 1);
-        chunk.writeChunk(OP_CODE::RETURN, 1);
-        runTest("Negation", chunk, -5.0);
-    }
-
-    {
-        Chunk chunk(100);
-        chunk.writeConstant(3.0, 1);
-        chunk.writeConstant(4.0, 1);
-        chunk.writeChunk(OP_CODE::ADD, 1);
-        chunk.writeConstant(5.0, 2);
-        chunk.writeConstant(2.0, 2);
-        chunk.writeChunk(OP_CODE::SUB, 2);
-        chunk.writeChunk(OP_CODE::MULT, 3);
-        chunk.writeChunk(OP_CODE::RETURN, 3);
-        runTest("Complex Expression", chunk, 21.0);
-    }
-
     return 0;
 }

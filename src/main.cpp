@@ -1,3 +1,4 @@
+#include "Compiler.h"
 #include "Scanner.h"
 #include <Tests.h>
 #include <fstream>
@@ -17,9 +18,7 @@ void runFile(std::string path)
     std::string source = readFile(path);
     Scanner scanner { source };
     auto tokens = scanner.tokenize();
-    for (auto& token : tokens) {
-        std::cout << token.lexeme << std::endl;
-    }
+    Compiler compiler { tokens };
 }
 
 void repl()

@@ -1,5 +1,6 @@
 #include "Compiler.h"
 #include "Scanner.h"
+#include "vMachine.h"
 #include <Tests.h>
 #include <fstream>
 #include <iostream>
@@ -19,6 +20,14 @@ void runFile(std::string path)
     Scanner scanner { source };
     auto tokens = scanner.tokenize();
     Compiler compiler { tokens };
+
+    std::optional<Chunk> chunk = compiler.compile();
+    if (chunk) {
+        vMachine vm { *chunk };
+        vm.run();
+    } else {
+        std::cerr << "Compilation failed." << std::endl;
+    }
 }
 
 void repl()
@@ -30,8 +39,17 @@ void repl()
             std::cout << '\n';
             break;
         }
-
-        std::cout << line << std::endl;
+        Scanner scanner { line };
+        auto tokens = scanner.tokenize();
+        scanner.addEOFToken();
+        Compiler compiler { tokens };
+        std::optional<Chunk> chunk = compiler.compile();
+        if (chunk) {
+            vMachine vm { *chunk };
+            vm.run();
+        } else {
+            std::cerr << "Compilation failed." << std::endl;
+        }
     }
 }
 

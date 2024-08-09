@@ -22,6 +22,7 @@ enum class Tokentype {
     FUN,
     WHILE,
     PRINT,
+    ERROR,
     RETURN,
     CARRIGERETURN,
     WHITESPACE,

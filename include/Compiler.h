@@ -2,10 +2,11 @@
 #include "Chunk.h"
 #include "Instructions.h"
 #include "Token.h"
-#include <functional>
 #include <iostream>
 #include <optional>
+#include <unordered_map>
 #include <vector>
+#define DEBUG_PRINT_CODE
 
 enum class Precedence {
     NONE,
@@ -21,95 +22,131 @@ enum class Precedence {
     PRIMARY
 };
 
-using ParseFn = std::function<void()>;
-
-struct ParseRule {
-    ParseFn prefix;
-    ParseFn infix;
-    Precedence precedence;
-};
-
 class Compiler {
-
 public:
     Compiler(std::vector<Token>& tokens)
-        : tokens { std::move(tokens) }
+        : tokens(tokens)
+        , current(0)
     {
+        initRules();
     }
-    Compiler() = default;
 
-    size_t getLine()
+    std::optional<Chunk> compile()
     {
-        return current;
+        hadError = false;
+        panicMode = false;
+
+        expression();
+        consume(Tokentype::EOF_TOKEN, "Expect end of expression.");
+        endCompiler();
+
+        return hadError ? std::nullopt : std::make_optional(currentChunk);
     }
 
 private:
+    using ParseFn = void (Compiler::*)();
+
+    struct ParseRule {
+        ParseFn prefix;
+        ParseFn infix;
+        Precedence precedence;
+    };
+
     Chunk currentChunk { 100 };
     std::vector<Token> tokens;
     bool hadError = false;
-    size_t current = 0;
-    static void report(const int line, const std::string& where, const std::string& message)
+    bool panicMode = false;
+    size_t current;
+    Token previous;
+    std::unordered_map<Tokentype, ParseRule> rules;
+
+    void initRules()
     {
-        std::cerr << "[line " << line << "] Error " << where << ": " << message << std::endl;
+        rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, Precedence::NONE };
+        rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, Precedence::TERM };
+        rules[Tokentype::RIGHTPEREN] = { nullptr, nullptr, Precedence::NONE };
+        rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, Precedence::TERM };
+        rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, Precedence::FACTOR };
+        rules[Tokentype::STAR] = { nullptr, &Compiler::binary, Precedence::FACTOR };
+        rules[Tokentype::INTEGER] = { &Compiler::number, nullptr, Precedence::NONE };
     }
-    void handleError(const int line, const std::string& message)
+
+    void advance()
     {
-        report(line, "", message);
+        if (current < tokens.size()) {
+            previous = tokens[current++];
+        } else {
+            errorAtCurrent("Unexpected end of input.");
+        }
+    }
+
+    void consume(Tokentype type, const std::string& message)
+    {
+        if (tokens[current].type == type) {
+            advance();
+        } else {
+            errorAtCurrent(message);
+        }
+    }
+
+    void errorAtCurrent(const std::string& message)
+    {
+        errorAt(tokens[current], message);
+    }
+
+    void error(const std::string& message)
+    {
+        errorAt(previous, message);
+    }
+
+    void errorAt(const Token& token, const std::string& message)
+    {
+        if (panicMode)
+            return;
+        panicMode = true;
+
+        std::cerr << "[line " << token.line << "] Error";
+        if (token.type == Tokentype::EOF_TOKEN) {
+            std::cerr << " at end";
+        } else {
+            std::cerr << " at '" << token.lexeme << "'";
+        }
+
+        std::cerr << ": " << message << std::endl;
         hadError = true;
     }
-    void synchronize()
+
+    void endCompiler()
     {
+        emitReturn();
+    }
+
+    void expression()
+    {
+        parsePrecedence(Precedence::ASSIGNMENT);
+    }
+
+    void parsePrecedence(Precedence precedence)
+    {
+        ParseFn prefixRule = getRule(tokens[current].type).prefix;
+        if (prefixRule == nullptr) {
+            error("Expect expression.");
+            return;
+        }
+
         advance();
-        while (!isAtEnd()) {
-            if (previous().type == Tokentype::SEMICOLON)
-                return;
+        (this->*prefixRule)();
 
-            switch (peek().type) {
-            case Tokentype::CLASS:
-            case Tokentype::FUN:
-            case Tokentype::LET:
-            case Tokentype::FOR:
-            case Tokentype::IF:
-            case Tokentype::WHILE:
-            case Tokentype::PRINT:
-            case Tokentype::RETURN:
-                return;
-            }
-
+        while (precedence <= getRule(tokens[current].type).precedence) {
             advance();
+            ParseFn infixRule = getRule(previous.type).infix;
+            (this->*infixRule)();
         }
     }
-
-    bool check(Tokentype type)
+    ParseRule getRule(Tokentype type)
     {
-        if (isAtEnd())
-            return false;
-        return tokens[current].type == type;
-    }
-
-    Token& peek()
-    {
-        return tokens.at(current);
-    }
-
-    Token& previous()
-    {
-        return tokens.at(current - 1);
-    }
-    Token& advance()
-    {
-        if (!isAtEnd()) {
-            current++;
-        }
-        return previous();
-    }
-
-    std::optional<Token> consume(const Tokentype type, const std::string& message)
-    {
-        if (check(type))
-            return std::make_optional<Token>(advance());
-        handleError(current, message);
-        return std::nullopt;
+        auto it = rules.find(type);
+        return it != rules.end() ? it->second : ParseRule { nullptr, nullptr, Precedence::NONE };
     }
 
     void grouping()
@@ -118,14 +155,54 @@ private:
         consume(Tokentype::RIGHTPEREN, "Expect ')' after expression.");
     }
 
-    bool isAtEnd()
+    void unary()
     {
-        return peek().type == Tokentype::EOF_TOKEN;
+        Tokentype operatorType = previous.type;
+
+        parsePrecedence(Precedence::UNARY);
+
+        switch (operatorType) {
+        case Tokentype::MINUS:
+            emitByte(OP_CODE::NEG);
+            break;
+        default:
+            return;
+        }
+    }
+
+    void binary()
+    {
+        Tokentype operatorType = previous.type;
+        ParseRule rule = getRule(operatorType);
+        parsePrecedence(static_cast<Precedence>(static_cast<int>(rule.precedence) + 1));
+
+        switch (operatorType) {
+        case Tokentype::PLUS:
+            emitByte(OP_CODE::ADD);
+            break;
+        case Tokentype::MINUS:
+            emitByte(OP_CODE::SUB);
+            break;
+        case Tokentype::STAR:
+            emitByte(OP_CODE::MULT);
+            break;
+        case Tokentype::SLASH:
+            emitByte(OP_CODE::DIV);
+            break;
+        default:
+            return;
+        }
+    }
+
+    void number()
+    {
+        double value = std::stod(previous.lexeme);
+        emitConstant(value);
     }
 
     void emitByte(uint8_t byte)
     {
-        currentChunk.writeChunk(byte, current);
+        currentChunk.writeChunk(byte, previous.line);
     }
 
     void emitBytes(uint8_t byte1, uint8_t byte2)
@@ -133,18 +210,14 @@ private:
         emitByte(byte1);
         emitByte(byte2);
     }
+
     void emitReturn()
     {
         emitByte(OP_CODE::RETURN);
     }
+
     void emitConstant(double value)
     {
-        currentChunk.writeConstant(value, current);
-    }
-
-    void number()
-    {
-        double value = std::stod(previous().lexeme);
-        emitConstant(value);
+        currentChunk.writeConstant(value, previous.line);
     }
 };

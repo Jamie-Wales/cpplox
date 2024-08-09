@@ -24,7 +24,7 @@ enum class Precedence {
 
 class Compiler {
 public:
-    Compiler(std::vector<Token>& tokens)
+    Compiler(const std::vector<Token>& tokens)
         : tokens(tokens)
         , current(0)
     {
@@ -53,7 +53,7 @@ private:
     };
 
     Chunk currentChunk { 100 };
-    std::vector<Token> tokens;
+    const std::vector<Token>& tokens;
     bool hadError = false;
     bool panicMode = false;
     size_t current;

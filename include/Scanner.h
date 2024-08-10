@@ -23,17 +23,19 @@ public:
     }
 
 private:
-    const std::string input;
-    std::vector<Token> tokens;
-    int line = 0;
-    int row = 0;
-
     struct RegexInfo {
         std::regex regex;
         Tokentype type;
     };
 
+    static const std::unordered_map<std::string, Tokentype> keywords;
     static const std::vector<RegexInfo> regexList;
+    static const std::vector<std::pair<std::string, Tokentype>> operators;
+
+    const std::string input;
+    std::vector<Token> tokens;
+    int line = 0;
+    int row = 0;
 
     std::optional<Token> matchToken(std::string::const_iterator& it) const;
     void handleWhitespace(const std::string& lexeme);

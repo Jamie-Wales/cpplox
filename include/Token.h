@@ -4,6 +4,9 @@
 enum class Tokentype {
     FLOAT,
     INTEGER,
+    BANG,
+    TRUE,
+    FALSE,
     STRING,
     PLUS,
     MINUS,
@@ -27,8 +30,21 @@ enum class Tokentype {
     CARRIGERETURN,
     WHITESPACE,
     EOF_TOKEN,
+    NIL,
+    EQUAL,
+    EQUAL_EQUAL,
+    BANG_EQUAL,
+    LESS,
+    LESS_EQUAL,
+    GREATER,
+    GREATER_EQUAL,
+    PLUS_EQUAL,
+    MINUS_EQUAL,
+    STAR_EQUAL,
+    SLASH_EQUAL,
     UNKNOWN
 };
+
 struct Token {
     Tokentype type;
     std::string lexeme;

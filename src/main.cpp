@@ -39,6 +39,10 @@ void repl()
             std::cout << '\n';
             break;
         }
+        if (line == "exit") {
+            std::cout << "Goodbye!" << std::endl;
+            break;
+        }
         Scanner scanner { line };
         auto tokens = scanner.tokenize();
         scanner.addEOFToken();

@@ -21,10 +21,10 @@ void vMachine::run()
         uint8_t byte = instructions.code[ip++];
 #ifdef DEBUG_TRACE_EXECUTION
         std::printf("          ");
-        std::stack<double> tempStack = stack;
+        std::stack<Value> tempStack = stack;
         while (!tempStack.empty()) {
             std::printf("[ ");
-            printValue(tempStack.top());
+            tempStack.top().print();
             std::printf(" ]");
             tempStack.pop();
         }
@@ -35,7 +35,7 @@ void vMachine::run()
         switch (byte) {
         case RETURN: {
             if (!stack.empty()) {
-                printValue(stack.top());
+                stack.top().print();
                 std::cout << std::endl;
                 stack.pop();
             }
@@ -44,19 +44,16 @@ void vMachine::run()
         }
         case CONSTANT: {
             Value constant = readConstant();
-            stack.push(constant.value);
+            stack.push(constant);
             break;
         }
         case CONSTANT_LONG: {
             Value constant = readConstantLong();
-            stack.push(constant.value);
+            stack.push(constant);
             break;
         }
         case ADD:
             add();
-            break;
-        case SUB:
-            sub();
             break;
         case MULT:
             mult();
@@ -67,6 +64,45 @@ void vMachine::run()
         case NEG:
             neg();
             break;
+        case TRUE:
+            stack.push({ true });
+            break;
+        case FALSE:
+            stack.push({ false });
+            break;
+        case NIL:
+            stack.push({ nullptr });
+            break;
+        case EQUAL: {
+            auto b = stack.top();
+            stack.pop();
+            auto a = stack.top();
+            stack.pop();
+            stack.push(a == b);
+            break;
+        }
+        case GREATER: {
+            auto b = stack.top();
+            stack.pop();
+            auto a = stack.top();
+            stack.pop();
+            stack.push(a > b);
+            break;
+        }
+        case LESS: {
+            auto b = stack.top();
+            stack.pop();
+            auto a = stack.top();
+            stack.pop();
+            stack.push(a < b);
+            break;
+        }
+        case NOT: {
+            auto a = stack.top();
+            stack.pop();
+            stack.push(!a);
+            break;
+        }
         default:
             std::cerr << "Unknown opcode: " << static_cast<int>(byte) << std::endl;
             return;
@@ -79,13 +115,6 @@ void vMachine::add()
     auto right = stack.top();
     stack.pop();
     stack.top() += right;
-}
-
-void vMachine::sub()
-{
-    auto right = stack.top();
-    stack.pop();
-    stack.top() -= right;
 }
 
 void vMachine::mult()

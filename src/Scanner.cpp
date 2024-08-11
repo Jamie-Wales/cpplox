@@ -88,4 +88,5 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "false", Tokentype::FALSE },
     { "true", Tokentype::TRUE },
     { "nil", Tokentype::NIL },
+    { "print", Tokentype::PRINT },
 };

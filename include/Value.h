@@ -1,5 +1,6 @@
 #pragma once
 #include "Object.h"
+#include "Stringinterner.h"
 #include "Visit.h"
 #include <cstddef>
 #include <format>
@@ -93,20 +94,37 @@ struct Value {
                               [](Obj* a, Obj* b) -> Value {
                                   if (auto sa = std::get_if<ObjString>(&a->as)) {
                                       if (auto sb = std::get_if<ObjString>(&b->as)) {
-                                          return Value(new Obj(ObjString(sa->str + sb->str)));
+                                          auto& interner = StringInterner::instance();
+                                          if (auto existing = interner.find(*sa->str + *sb->str)) {
+                                              return Value(new Obj(ObjString(existing)));
+                                          }
+                                          const std::string* interned = interner.intern(*sa->str + *sb->str);
+                                          return Value(new Obj(ObjString(interned)));
                                       }
                                   }
                                   throw std::runtime_error("Can only concatenate string objects");
                               },
                               [](Obj* a, double b) -> Value {
                                   if (auto sa = std::get_if<ObjString>(&a->as)) {
-                                      return Value(new Obj(ObjString(sa->str + std::format("{:.6g}", b))));
+                                      auto& interner = StringInterner::instance();
+                                      std::string numStr = std::format("{:.6g}", b);
+                                      if (auto existing = interner.find(*sa->str + numStr)) {
+                                          return Value(new Obj(ObjString(existing)));
+                                      }
+                                      const std::string* interned = interner.intern(*sa->str + numStr);
+                                      return Value(new Obj(ObjString(interned)));
                                   }
                                   throw std::runtime_error("Can only concatenate string with number");
                               },
                               [](double a, Obj* b) -> Value {
                                   if (auto sb = std::get_if<ObjString>(&b->as)) {
-                                      return Value(new Obj(ObjString(std::format("{:.6g}", a) + sb->str)));
+                                      auto& interner = StringInterner::instance();
+                                      std::string numStr = std::format("{:.6g}", a);
+                                      if (auto existing = interner.find(numStr + *sb->str)) {
+                                          return Value(new Obj(ObjString(existing)));
+                                      }
+                                      const std::string* interned = interner.intern(numStr + *sb->str);
+                                      return Value(new Obj(ObjString(interned)));
                                   }
                                   throw std::runtime_error("Can only concatenate number with string");
                               },
@@ -115,27 +133,6 @@ struct Value {
                               } },
             as, other.as);
     }
-
-    Value operator<(const Value& other) const
-    {
-        return std::visit(overloaded {
-                              [](double a, double b) { return Value(a < b); },
-                              [](Obj* a, Obj* b) -> Value {
-                                  return std::visit(overloaded {
-                                                        [](const ObjString& sa, const ObjString& sb) {
-                                                            return Value(sa.str < sb.str);
-                                                        },
-                                                        [](const auto&, const auto&) -> Value {
-                                                            throw std::runtime_error("Can only compare string objects");
-                                                        } },
-                                      a->as, b->as);
-                              },
-                              [](const auto&, const auto&) -> Value {
-                                  throw std::runtime_error("Invalid operation: can only compare numbers or strings");
-                              } },
-            as, other.as);
-    }
-
     Value operator==(const Value& other) const
     {
         return std::visit(overloaded {
@@ -227,8 +224,3 @@ struct Value {
             as, other.as);
     }
 };
-
-inline Value makeString(const std::string& s)
-{
-    return Value(new Obj(ObjString(s)));
-}

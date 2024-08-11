@@ -7,9 +7,9 @@
 
 /* #TODO ADD CONSTANT STRING */
 struct ObjString {
-    const std::string str;
-    ObjString(std::string s)
-        : str(std::move(s))
+    const std::string* str;
+    ObjString(const std::string* s)
+        : str(s)
     {
     }
 };
@@ -34,7 +34,7 @@ public:
     {
         std::visit(overloaded {
                        [](const ObjString& s) {
-                           std::cout << std::format("\"{}\"", s.str);
+                           std::cout << std::format("\"{}\"", *s.str);
                        },
                        [](const ObjFunction&) {
                            std::cout << "<function>";

@@ -63,6 +63,10 @@ int Chunk::disassembleInstruction(int offset)
         return simpleInstruction("OP_LESS", offset);
     case EQUAL:
         return simpleInstruction("OP_EQUAL", offset);
+    case PRINT:
+        return simpleInstruction("OP_PRINT", offset);
+    case POP:
+        return simpleInstruction("OP_POP", offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;

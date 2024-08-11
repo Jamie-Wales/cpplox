@@ -1,5 +1,6 @@
 #include "Compiler.h"
 #include "Instructions.h"
+#include "Stringinterner.h"
 #include "Token.h"
 #include "Value.h"
 #include <optional>
@@ -8,10 +9,17 @@ std::optional<Chunk> Compiler::compile()
 {
     hadError = false;
     panicMode = false;
-    expression();
-    consume(Tokentype::EOF_TOKEN, "Expect end of expression.");
+    while (!match(Tokentype::EOF_TOKEN)) {
+        declaration();
+    }
     endCompiler();
     return hadError ? std::nullopt : std::make_optional(currentChunk);
+}
+
+Value Compiler::makeString(const std::string& s)
+{
+    const std::string* internedString = StringInterner::instance().intern(s);
+    return Value(new Obj(ObjString(internedString)));
 }
 
 void Compiler::initRules()

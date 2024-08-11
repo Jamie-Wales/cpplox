@@ -1,5 +1,6 @@
 #pragma once
 #include "Chunk.h"
+#include "Instructions.h"
 #include "Token.h"
 #include <optional>
 #include <unordered_map>
@@ -47,6 +48,7 @@ private:
     Token previous;
     std::unordered_map<Tokentype, ParseRule> rules;
 
+    Value makeString(const std::string& s);
     void compiler();
     ParseRule getRule(Tokentype type);
     void initRules();
@@ -66,4 +68,66 @@ private:
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
     void emitConstant(const Value& value);
+    bool check(Tokentype type)
+    {
+        return tokens[current].type == type;
+    }
+    void printStatement()
+    {
+        expression();
+        consume(Tokentype::SEMICOLON, "Expect ';' after value.");
+        emitByte(OP_CODE::PRINT);
+    }
+    void expressionStatement()
+    {
+        expression();
+        consume(Tokentype::SEMICOLON, "Expect ';' after expression.");
+        emitByte(OP_CODE::POP);
+    }
+    void statement()
+    {
+        if (match(Tokentype::PRINT)) {
+            printStatement();
+        } else {
+            expressionStatement();
+        }
+    }
+    void declaration()
+    {
+        if (panicMode)
+            synchronize();
+        statement();
+    }
+
+    bool match(Tokentype type)
+    {
+        if (!check(type))
+            return false;
+        advance();
+        return true;
+    }
+    void synchronize()
+    {
+        panicMode = false;
+
+        while (tokens[current].type != Tokentype::EOF_TOKEN) {
+            if (previous.type == Tokentype::SEMICOLON)
+                return;
+            switch (tokens[current].type) {
+            case Tokentype::CLASS:
+            case Tokentype::FUN:
+            case Tokentype::LET:
+            case Tokentype::FOR:
+            case Tokentype::IF:
+            case Tokentype::WHILE:
+            case Tokentype::PRINT:
+            case Tokentype::RETURN:
+                return;
+
+            default:;
+            }
+
+            advance();
+        }
+    }
 };

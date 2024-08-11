@@ -1,7 +1,6 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include <iostream>
-#define DEBUG_TRACE_EXECUTION
 Value vMachine::readConstant()
 {
     return instructions.pool[instructions.code[ip++]];
@@ -31,29 +30,25 @@ void vMachine::ensureStackSize(size_t size, const char* opcode)
 
 void vMachine::run()
 {
-
     try {
         while (ip < instructions.code.size()) {
             uint8_t byte = instructions.code[ip++];
 #ifdef DEBUG_TRACE_EXECUTION
-            std::printf("          ");
+            std::cout << std::format("          ");
             std::stack<Value> tempStack = stack;
             while (!tempStack.empty()) {
-                std::printf("[ ");
+                std::cout << std::format("[ ");
                 tempStack.top().print();
-                std::printf(" ]");
+                std::cout << std::format(" ]");
                 tempStack.pop();
             }
-            std::printf("\n");
+            std::cout << std::format("\n");
             instructions.disassembleInstruction(ip - 1);
 #endif
-
             switch (byte) {
             case RETURN: {
-                ensureStackSize(1, "RETURN");
-                stack.top().print();
-                std::cout << std::endl;
-                stack.pop();
+                if (stack.size() > 0)
+                    stack.pop();
                 state = vState::OK;
                 return;
             }
@@ -83,21 +78,28 @@ void vMachine::run()
                 ensureStackSize(1, "NEGATE");
                 neg();
                 break;
-            // ... other cases ...
+            case PRINT:
+                ensureStackSize(1, "PRINT");
+                stack.top().print();
+                stack.pop();
+                std::cout << std::endl;
+                break;
+            case POP:
+                stack.pop();
+                break;
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
         }
     } catch (const StackUnderflowError& e) {
-        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;
         stack = std::stack<Value>(); // Clear the stack
     } catch (const std::exception& e) {
-        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;
     }
 }
-
 void vMachine::add()
 {
     auto right = stack.top();

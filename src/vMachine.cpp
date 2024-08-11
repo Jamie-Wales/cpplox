@@ -2,7 +2,6 @@
 #include "Instructions.h"
 #include <iostream>
 #define DEBUG_TRACE_EXECUTION
-
 Value vMachine::readConstant()
 {
     return instructions.pool[instructions.code[ip++]];
@@ -15,98 +14,87 @@ Value vMachine::readConstantLong()
     return instructions.pool[index];
 }
 
+class StackUnderflowError : public std::runtime_error {
+public:
+    StackUnderflowError(const std::string& opcode)
+        : std::runtime_error(std::format("Stack underflow occurred during {} operation", opcode))
+    {
+    }
+};
+
+void vMachine::ensureStackSize(size_t size, const char* opcode)
+{
+    if (stack.size() < size) {
+        throw StackUnderflowError(opcode);
+    }
+}
+
 void vMachine::run()
 {
-    while (ip < instructions.code.size()) {
-        uint8_t byte = instructions.code[ip++];
+
+    try {
+        while (ip < instructions.code.size()) {
+            uint8_t byte = instructions.code[ip++];
 #ifdef DEBUG_TRACE_EXECUTION
-        std::printf("          ");
-        std::stack<Value> tempStack = stack;
-        while (!tempStack.empty()) {
-            std::printf("[ ");
-            tempStack.top().print();
-            std::printf(" ]");
-            tempStack.pop();
-        }
-        std::printf("\n");
-        instructions.disassembleInstruction(ip - 1);
+            std::printf("          ");
+            std::stack<Value> tempStack = stack;
+            while (!tempStack.empty()) {
+                std::printf("[ ");
+                tempStack.top().print();
+                std::printf(" ]");
+                tempStack.pop();
+            }
+            std::printf("\n");
+            instructions.disassembleInstruction(ip - 1);
 #endif
 
-        switch (byte) {
-        case RETURN: {
-            if (!stack.empty()) {
+            switch (byte) {
+            case RETURN: {
+                ensureStackSize(1, "RETURN");
                 stack.top().print();
                 std::cout << std::endl;
                 stack.pop();
+                state = vState::OK;
+                return;
             }
-            state = vState::OK;
-            return;
+            case CONSTANT: {
+                Value constant = readConstant();
+                stack.push(constant);
+                break;
+            }
+            case CONSTANT_LONG: {
+                Value constant = readConstantLong();
+                stack.push(constant);
+                break;
+            }
+            case ADD:
+                ensureStackSize(2, "ADD");
+                add();
+                break;
+            case MULT:
+                ensureStackSize(2, "MULTIPLY");
+                mult();
+                break;
+            case DIV:
+                ensureStackSize(2, "DIVIDE");
+                div();
+                break;
+            case NEG:
+                ensureStackSize(1, "NEGATE");
+                neg();
+                break;
+            // ... other cases ...
+            default:
+                throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
+            }
         }
-        case CONSTANT: {
-            Value constant = readConstant();
-            stack.push(constant);
-            break;
-        }
-        case CONSTANT_LONG: {
-            Value constant = readConstantLong();
-            stack.push(constant);
-            break;
-        }
-        case ADD:
-            add();
-            break;
-        case MULT:
-            mult();
-            break;
-        case DIV:
-            div();
-            break;
-        case NEG:
-            neg();
-            break;
-        case TRUE:
-            stack.push({ true });
-            break;
-        case FALSE:
-            stack.push({ false });
-            break;
-        case NIL:
-            stack.push({ nullptr });
-            break;
-        case EQUAL: {
-            auto b = stack.top();
-            stack.pop();
-            auto a = stack.top();
-            stack.pop();
-            stack.push(a == b);
-            break;
-        }
-        case GREATER: {
-            auto b = stack.top();
-            stack.pop();
-            auto a = stack.top();
-            stack.pop();
-            stack.push(a > b);
-            break;
-        }
-        case LESS: {
-            auto b = stack.top();
-            stack.pop();
-            auto a = stack.top();
-            stack.pop();
-            stack.push(a < b);
-            break;
-        }
-        case NOT: {
-            auto a = stack.top();
-            stack.pop();
-            stack.push(!a);
-            break;
-        }
-        default:
-            std::cerr << "Unknown opcode: " << static_cast<int>(byte) << std::endl;
-            return;
-        }
+    } catch (const StackUnderflowError& e) {
+        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        state = vState::BAD;
+        stack = std::stack<Value>(); // Clear the stack
+    } catch (const std::exception& e) {
+        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        state = vState::BAD;
     }
 }
 

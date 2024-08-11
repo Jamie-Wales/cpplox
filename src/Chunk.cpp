@@ -4,9 +4,9 @@
 #include <iostream>
 #include <string>
 
-void Chunk::writeConstant(double value, int line)
+void Chunk::writeConstant(const Value& value, int line)
 {
-    int index = addConstant(Value { value });
+    int index = addConstant(value);
     if (index < 256) {
         writeChunk(CONSTANT, line);
         writeChunk(index, line);
@@ -17,7 +17,6 @@ void Chunk::writeConstant(double value, int line)
         writeChunk(((index >> 16) & 0xff), line);
     }
 }
-
 void Chunk::writeChunk(uint8_t byte, int line)
 {
     code.push_back(byte);
@@ -70,7 +69,7 @@ int Chunk::disassembleInstruction(int offset)
     }
 }
 
-void Chunk::printLineNumber(int offset)
+void Chunk::printLineNumber(int offset) const
 {
     for (const auto& lineInfo : lines) {
         if (lineInfo.offset == offset) {
@@ -81,7 +80,7 @@ void Chunk::printLineNumber(int offset)
     std::cout << "   | ";
 }
 
-int Chunk::constantInstruction(const std::string& name, int offset)
+int Chunk::constantInstruction(const std::string& name, int offset) const
 {
     uint8_t constant = code[offset + 1];
     std::cout << std::format("{:<8} {:4d} '", name, constant);
@@ -90,7 +89,7 @@ int Chunk::constantInstruction(const std::string& name, int offset)
     return offset + 2;
 }
 
-int Chunk::constantLongInstruction(const std::string& name, int offset)
+int Chunk::constantLongInstruction(const std::string& name, int offset) const
 {
     uint32_t constant = code[offset + 1] | (code[offset + 2] << 8) | (code[offset + 3] << 16);
     std::cout << std::format("{:<8} {:8d} '", name, constant);
@@ -99,13 +98,13 @@ int Chunk::constantLongInstruction(const std::string& name, int offset)
     return offset + 4;
 }
 
-int Chunk::simpleInstruction(const std::string& name, int offset)
+int Chunk::simpleInstruction(const std::string& name, int offset) const
 {
     std::cout << name << '\n';
     return offset + 1;
 }
 
-int Chunk::addConstant(Value value)
+int Chunk::addConstant(const Value& value)
 {
     pool.push_back(value);
     return pool.size() - 1;

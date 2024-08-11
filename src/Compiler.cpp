@@ -1,6 +1,7 @@
 #include "Compiler.h"
 #include "Instructions.h"
 #include "Token.h"
+#include "Value.h"
 #include <optional>
 
 std::optional<Chunk> Compiler::compile()
@@ -22,6 +23,7 @@ void Compiler::initRules()
     rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, Precedence::FACTOR };
     rules[Tokentype::STAR] = { nullptr, &Compiler::binary, Precedence::FACTOR };
     rules[Tokentype::INTEGER] = { &Compiler::literal, nullptr, Precedence::NONE };
+    rules[Tokentype::STRING] = { &Compiler::literal, nullptr, Precedence::NONE };
     rules[Tokentype::NIL] = { &Compiler::literal, nullptr, Precedence::NONE };
     rules[Tokentype::TRUE] = { &Compiler::literal, nullptr, Precedence::NONE };
     rules[Tokentype::FALSE] = { &Compiler::literal, nullptr, Precedence::NONE };
@@ -121,7 +123,7 @@ void Compiler::unary()
     parsePrecedence(Precedence::UNARY);
     switch (operatorType) {
     case Tokentype::MINUS:
-        emitBytes(OP_CODE::NEG, OP_CODE::ADD);
+        emitByte(OP_CODE::NEG);
         break;
     case Tokentype::BANG:
         emitByte(OP_CODE::NOT);
@@ -182,7 +184,11 @@ void Compiler::literal()
         break;
     case Tokentype::INTEGER: {
         double value = std::stod(previous.lexeme);
-        emitConstant(value);
+        emitConstant(Value(value));
+    } break;
+    case Tokentype::STRING: {
+        std::string value = previous.lexeme.substr(1, previous.lexeme.length() - 2);
+        emitConstant(makeString(value));
     } break;
     case Tokentype::NIL:
         emitByte(OP_CODE::NIL);
@@ -191,7 +197,6 @@ void Compiler::literal()
         return;
     }
 }
-
 void Compiler::emitByte(uint8_t byte)
 {
     currentChunk.writeChunk(byte, previous.line);
@@ -208,7 +213,7 @@ void Compiler::emitReturn()
     emitByte(OP_CODE::RETURN);
 }
 
-void Compiler::emitConstant(double value)
+void Compiler::emitConstant(const Value& value)
 {
     currentChunk.writeConstant(value, previous.line);
 }

@@ -42,6 +42,9 @@ enum class Tokentype {
     MINUS_EQUAL,
     STAR_EQUAL,
     SLASH_EQUAL,
+    COMMENT,
+    UNTERMINATED_STRING,
+    UNTERMINATED_COMMENT,
     UNKNOWN
 };
 

@@ -38,5 +38,5 @@ private:
     int row = 0;
 
     std::optional<Token> matchToken(std::string::const_iterator& it) const;
-    void handleWhitespace(const std::string& lexeme);
+    void updatePosition(const std::string& lexeme);
 };

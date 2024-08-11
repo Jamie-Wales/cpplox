@@ -65,5 +65,5 @@ private:
     void emitByte(uint8_t byte);
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
-    void emitConstant(double value);
+    void emitConstant(const Value& value);
 };

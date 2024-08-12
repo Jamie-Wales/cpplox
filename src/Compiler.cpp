@@ -221,7 +221,7 @@ void Compiler::emitReturn()
     emitByte(OP_CODE::RETURN);
 }
 
-void Compiler::emitConstant(const Value& value)
+uint8_t Compiler::emitConstant(const Value& value)
 {
-    currentChunk.writeConstant(value, previous.line);
+    return currentChunk.writeConstant(value, previous.line);
 }

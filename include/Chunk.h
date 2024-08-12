@@ -24,7 +24,7 @@ public:
     std::vector<Value> pool;
     std::vector<LineInfo> lines;
 
-    void writeConstant(const Value&, int line);
+    int writeConstant(const Value&, int line);
     void writeChunk(uint8_t byte, int line);
     void disassembleChunk(const std::string_view& name)
     {
@@ -38,8 +38,8 @@ public:
     int constantInstruction(const std::string& name, int offset) const;
     int constantLongInstruction(const std::string& name, int offset) const;
     int simpleInstruction(const std::string& name, int offset) const;
+    int addConstant(const Value& value);
 
 private:
-    int addConstant(const Value& value);
     void printLineNumber(int offset) const;
 };

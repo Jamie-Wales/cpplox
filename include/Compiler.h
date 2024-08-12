@@ -2,6 +2,7 @@
 #include "Chunk.h"
 #include "Instructions.h"
 #include "Token.h"
+#include <cstdint>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -40,6 +41,7 @@ private:
         Precedence precedence;
     };
 
+    uint8_t makeConstant(Value value);
     Chunk currentChunk { 100 };
     const std::vector<Token>& tokens;
     bool hadError = false;
@@ -67,7 +69,7 @@ private:
     void emitByte(uint8_t byte);
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
-    void emitConstant(const Value& value);
+    uint8_t emitConstant(const Value& value);
     bool check(Tokentype type)
     {
         return tokens[current].type == type;
@@ -92,10 +94,18 @@ private:
             expressionStatement();
         }
     }
+    void letDecleration()
+    {
+    }
+
     void declaration()
     {
         if (panicMode)
             synchronize();
+        if (match(Tokentype::LET))
+            letDecleration();
+        else
+            statement();
         statement();
     }
 

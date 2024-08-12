@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-void Chunk::writeConstant(const Value& value, int line)
+int Chunk::writeConstant(const Value& value, int line)
 {
     int index = addConstant(value);
     if (index < 256) {
@@ -16,6 +16,8 @@ void Chunk::writeConstant(const Value& value, int line)
         writeChunk(((index >> 8) & 0xff), line);
         writeChunk(((index >> 16) & 0xff), line);
     }
+
+    return index;
 }
 void Chunk::writeChunk(uint8_t byte, int line)
 {

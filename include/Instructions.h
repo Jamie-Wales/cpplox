@@ -3,6 +3,7 @@
 enum OP_CODE { ADD,
     MULT,
     PRINT,
+    GLOBAL,
     POP,
     DIV,
     NEG,

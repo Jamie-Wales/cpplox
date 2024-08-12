@@ -94,8 +94,30 @@ private:
             expressionStatement();
         }
     }
-    void letDecleration()
+    uint8_t identifierConstant(const Token& token)
     {
+        return emitConstant(makeString(token.lexeme));
+    }
+    uint8_t parseVariable(const std::string& errorMessage)
+    {
+        consume(Tokentype::IDENTIFIER, errorMessage);
+        return identifierConstant(previous);
+    }
+
+    void defineVariable(uint8_t global)
+    {
+        emitBytes(OP_CODE::GLOBAL, global);
+    }
+    void letDeclaration()
+    {
+        uint8_t global = parseVariable("Expect variable name.");
+        if (match(Tokentype::EQUAL)) {
+            expression();
+        } else {
+            emitByte(OP_CODE::NIL);
+        }
+        consume(Tokentype::SEMICOLON, "Expect ; after variable declaration");
+        defineVariable(global);
     }
 
     void declaration()
@@ -103,7 +125,7 @@ private:
         if (panicMode)
             synchronize();
         if (match(Tokentype::LET))
-            letDecleration();
+            letDeclaration();
         else
             statement();
         statement();

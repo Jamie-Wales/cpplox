@@ -4,6 +4,15 @@
 #include <iostream>
 #include <string>
 
+void Chunk::disassembleChunk(const std::string_view& name)
+{
+    std::cout << std::format("== {} ==\n", name);
+
+    for (size_t offset = 0; offset < code.size();) {
+        offset = disassembleInstruction(offset);
+    }
+}
+
 int Chunk::writeConstant(const Value& value, int line)
 {
     int index = addConstant(value);

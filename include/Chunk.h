@@ -6,11 +6,6 @@
 #include <string>
 #include <vector>
 
-struct LineInfo {
-    int offset;
-    int lineNumber;
-};
-
 class Chunk {
 public:
     Chunk(int size)
@@ -20,20 +15,18 @@ public:
         lines.reserve(size);
     };
 
+    struct LineInfo {
+        int offset;
+        int lineNumber;
+    };
+
     std::vector<uint8_t> code;
     std::vector<Value> pool;
     std::vector<LineInfo> lines;
 
     int writeConstant(const Value&, int line);
     void writeChunk(uint8_t byte, int line);
-    void disassembleChunk(const std::string_view& name)
-    {
-        std::cout << std::format("== {} ==\n", name);
-
-        for (size_t offset = 0; offset < code.size();) {
-            offset = disassembleInstruction(offset);
-        }
-    }
+    void disassembleChunk(const std::string_view& name);
     int disassembleInstruction(int offset);
     int constantInstruction(const std::string& name, int offset) const;
     int constantLongInstruction(const std::string& name, int offset) const;

@@ -1,6 +1,25 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include <iostream>
+#include <ostream>
+#include <sstream>
+#include <string>
+
+template <typename... Args>
+void vMachine::runtimeError(const char* format, Args&&... args)
+{
+    std::ostringstream error_stream;
+    (error_stream << ... << std::forward<Args>(args));
+    std::string error_message = error_stream.str();
+
+    std::cerr << error_message << '\n';
+
+    size_t instruction = ip - 1;
+    int line = instructions.lines[instruction].lineNumber;
+    std::cerr << "[line " << line << "] in script\n";
+    resetStack();
+}
+
 Value vMachine::readConstant()
 {
     return instructions.pool[instructions.code[ip++]];

@@ -1,11 +1,8 @@
 #pragma once
 #include <Visit.h>
-#include <format>
-#include <iostream>
 #include <string>
 #include <variant>
 
-/* #TODO ADD CONSTANT STRING */
 struct ObjString {
     const std::string* str;
     ObjString(const std::string* s)
@@ -29,19 +26,5 @@ public:
         : as(std::move(value))
     {
     }
-
-    void print() const
-    {
-        std::visit(overloaded {
-                       [](const ObjString& s) {
-                           std::cout << std::format("\"{}\"", *s.str);
-                       },
-                       [](const ObjFunction&) {
-                           std::cout << "<function>";
-                       },
-                       [](const ObjInstance&) {
-                           std::cout << "<instance>";
-                       } },
-            as);
-    }
+    void print() const;
 };

@@ -3,6 +3,7 @@
 #include "Stringinterner.h"
 #include "Token.h"
 #include "Value.h"
+#include <iostream>
 #include <optional>
 
 std::optional<Chunk> Compiler::compile()
@@ -224,4 +225,99 @@ void Compiler::emitReturn()
 uint8_t Compiler::emitConstant(const Value& value)
 {
     return currentChunk.writeConstant(value, previous.line);
+}
+
+bool Compiler::check(Tokentype type)
+{
+    return tokens[current].type == type;
+}
+
+void Compiler::printStatement()
+{
+    expression();
+    consume(Tokentype::SEMICOLON, "Expect ';' after value.");
+    emitByte(OP_CODE::PRINT);
+}
+void Compiler::expressionStatement()
+{
+    expression();
+    consume(Tokentype::SEMICOLON, "Expect ';' after expression.");
+    emitByte(OP_CODE::POP);
+}
+void Compiler::statement()
+{
+    if (match(Tokentype::PRINT)) {
+        printStatement();
+    } else {
+        expressionStatement();
+    }
+}
+uint8_t Compiler::identifierConstant(const Token& token)
+{
+    return emitConstant(makeString(token.lexeme));
+}
+uint8_t Compiler::parseVariable(const std::string& errorMessage)
+{
+    consume(Tokentype::IDENTIFIER, errorMessage);
+    return identifierConstant(previous);
+}
+
+void Compiler::defineVariable(uint8_t global)
+{
+    emitBytes(OP_CODE::GLOBAL, global);
+}
+void Compiler::letDeclaration()
+{
+    uint8_t global = parseVariable("Expect variable name.");
+    if (match(Tokentype::EQUAL)) {
+        expression();
+    } else {
+        emitByte(OP_CODE::NIL);
+    }
+    consume(Tokentype::SEMICOLON, "Expect ; after variable declaration");
+    defineVariable(global);
+}
+
+void Compiler::declaration()
+{
+    if (panicMode)
+        synchronize();
+    if (match(Tokentype::LET))
+        letDeclaration();
+    else
+        statement();
+    statement();
+}
+
+bool Compiler::match(Tokentype type)
+{
+    if (!check(type))
+        return false;
+    advance();
+    return true;
+}
+
+void Compiler::synchronize()
+{
+    panicMode = false;
+
+    while (tokens[current].type != Tokentype::EOF_TOKEN) {
+        if (previous.type == Tokentype::SEMICOLON)
+            return;
+        switch (tokens[current].type) {
+        case Tokentype::CLASS:
+        case Tokentype::FUN:
+        case Tokentype::LET:
+        case Tokentype::FOR:
+        case Tokentype::IF:
+        case Tokentype::WHILE:
+        case Tokentype::PRINT:
+        case Tokentype::RETURN:
+            return;
+
+        default:;
+        }
+
+        advance();
+    }
 }

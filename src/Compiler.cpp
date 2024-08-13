@@ -3,6 +3,7 @@
 #include "Stringinterner.h"
 #include "Token.h"
 #include "Value.h"
+#include <cstdint>
 #include <iostream>
 #include <optional>
 
@@ -42,7 +43,7 @@ void Compiler::initRules()
     rules[Tokentype::GREATER_EQUAL] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
     rules[Tokentype::LESS] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
     rules[Tokentype::LESS_EQUAL] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
-    rules[Tokentype::IDENTIFIER] = { nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::IDENTIFIER] = { &Compiler::variable, nullptr, Precedence::NONE };
 }
 
 void Compiler::advance()
@@ -206,12 +207,12 @@ void Compiler::literal()
         return;
     }
 }
-void Compiler::emitByte(uint8_t byte)
+void Compiler::emitByte(OP_CODE byte)
 {
     currentChunk.writeChunk(byte, previous.line);
 }
 
-void Compiler::emitBytes(uint8_t byte1, uint8_t byte2)
+void Compiler::emitBytes(OP_CODE byte1, OP_CODE byte2)
 {
     emitByte(byte1);
     emitByte(byte2);
@@ -262,9 +263,19 @@ uint8_t Compiler::parseVariable(const std::string& errorMessage)
     return identifierConstant(previous);
 }
 
-void Compiler::defineVariable(uint8_t global)
+void Compiler::defineVariable(OP_CODE global)
 {
-    emitBytes(OP_CODE::GLOBAL, global);
+    emitBytes(OP_CODE::DEFINE_GLOBAL, global);
+}
+void Compiler::namedVariable(Token& token)
+{
+    uint8_t arg = identifierConstant(token);
+    emitBytes(OP_CODE::GET_GLOBAL, cast(arg));
+}
+
+void Compiler::variable()
+{
+    namedVariable(previous);
 }
 void Compiler::letDeclaration()
 {
@@ -275,7 +286,7 @@ void Compiler::letDeclaration()
         emitByte(OP_CODE::NIL);
     }
     consume(Tokentype::SEMICOLON, "Expect ; after variable declaration");
-    defineVariable(global);
+    defineVariable(cast(global));
 }
 
 void Compiler::declaration()
@@ -286,7 +297,6 @@ void Compiler::declaration()
         letDeclaration();
     else
         statement();
-    statement();
 }
 
 bool Compiler::match(Tokentype type)

@@ -1,9 +1,12 @@
 #pragma once
+#include <cstdint>
 
-enum OP_CODE { ADD,
+enum class OP_CODE : uint8_t {
+    ADD,
     MULT,
     PRINT,
-    GLOBAL,
+    DEFINE_GLOBAL,
+    GET_GLOBAL,
     POP,
     DIV,
     NEG,
@@ -13,17 +16,18 @@ enum OP_CODE { ADD,
     CONSTANT,
     CONSTANT_LONG,
     EQUAL,
-    EQUAL_EQUAL,
     GREATER,
     LESS,
     NOT,
-    RETURN };
-
-struct constant {
-    double value;
+    RETURN
 };
 
-struct lineStart {
-    int start;
-    int lineNumber;
-};
+constexpr inline uint8_t cast(OP_CODE code)
+{
+    return static_cast<uint8_t>(code);
+}
+
+constexpr inline OP_CODE cast(uint8_t value)
+{
+    return static_cast<OP_CODE>(value);
+}

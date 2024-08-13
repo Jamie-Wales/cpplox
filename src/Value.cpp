@@ -19,6 +19,19 @@ void Value::print() const
         as);
 }
 
+std::string Value::to_string()
+{
+    return std::visit(overloaded {
+                          [](double d) -> std::string { return std::format("{}", d); },
+                          [](bool b) -> std::string { return (b ? "true" : "false"); },
+                          [](nullptr_t) -> std::string { return "nil"; },
+                          [](Obj* o) -> std::string {
+                              return o->to_string();
+                          },
+                      },
+        as);
+}
+
 Value Value::operator+(const Value& other) const
 {
     return std::visit(overloaded {
@@ -68,6 +81,20 @@ Value Value::operator+(const Value& other) const
         as, other.as);
 }
 
+Value& Value::operator=(Value&& other) noexcept
+{
+    if (this != &other) {
+        if (auto obj_ptr = std::get_if<Obj*>(&as)) {
+            delete *obj_ptr;
+        }
+        as = std::move(other.as);
+        if (auto obj_ptr = std::get_if<Obj*>(&other.as)) {
+            *obj_ptr = nullptr;
+        }
+    }
+    return *this;
+}
+
 Value Value::operator==(const Value& other) const
 {
     return std::visit(overloaded {
@@ -101,6 +128,21 @@ Value& Value::operator*=(const Value& other)
                         } },
         as, other.as)
              .as;
+    return *this;
+}
+Value& Value::operator=(const Value& other)
+{
+    if (this != &other) {
+        if (auto obj_ptr = std::get_if<Obj*>(&as)) {
+            delete *obj_ptr;
+        }
+
+        as = other.as;
+
+        if (auto obj_ptr = std::get_if<Obj*>(&as)) {
+            as = new Obj(**obj_ptr);
+        }
+    }
     return *this;
 }
 

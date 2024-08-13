@@ -27,4 +27,5 @@ public:
     {
     }
     void print() const;
+    std::string to_string() const;
 };

@@ -4,6 +4,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#define DEBUG_TRACE_EXECUTION
 
 template <typename... Args>
 void vMachine::runtimeError(const char* format, Args&&... args)
@@ -22,6 +23,8 @@ void vMachine::runtimeError(const char* format, Args&&... args)
 
 Value vMachine::readConstant()
 {
+    if (ip > 255)
+        return readConstantLong();
     return instructions.pool[instructions.code[ip++]];
 }
 
@@ -65,47 +68,57 @@ void vMachine::run()
             instructions.disassembleInstruction(ip - 1);
 #endif
             switch (byte) {
-            case RETURN: {
+            case cast(OP_CODE::RETURN): {
                 if (stack.size() > 0)
                     stack.pop();
                 state = vState::OK;
                 return;
             }
-            case CONSTANT: {
+            case cast(OP_CODE::CONSTANT): {
                 Value constant = readConstant();
                 stack.push(constant);
-                break;
-            }
-            case CONSTANT_LONG: {
+            } break;
+            case cast(OP_CODE::CONSTANT_LONG): {
                 Value constant = readConstantLong();
                 stack.push(constant);
                 break;
             }
-            case ADD:
+            case cast(OP_CODE::ADD):
                 ensureStackSize(2, "ADD");
                 add();
                 break;
-            case MULT:
+            case cast(OP_CODE::MULT):
                 ensureStackSize(2, "MULTIPLY");
                 mult();
                 break;
-            case DIV:
+            case cast(OP_CODE::DIV):
                 ensureStackSize(2, "DIVIDE");
                 div();
                 break;
-            case NEG:
+            case cast(OP_CODE::NEG):
                 ensureStackSize(1, "NEGATE");
                 neg();
                 break;
-            case PRINT:
+            case cast(OP_CODE::PRINT):
                 ensureStackSize(1, "PRINT");
                 stack.top().print();
                 stack.pop();
                 std::cout << std::endl;
                 break;
-            case POP:
+            case cast(OP_CODE::POP):
                 stack.pop();
                 break;
+            case cast(OP_CODE::DEFINE_GLOBAL): {
+                auto variable = stack.top();
+                stack.pop();
+                auto name = stack.top();
+                stack.pop();
+                globals[name.to_string()] = variable;
+            } break;
+            case cast(OP_CODE::GET_GLOBAL): {
+                auto constant = readConstant();
+                constant.print();
+            } break;
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }

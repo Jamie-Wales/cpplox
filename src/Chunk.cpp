@@ -17,20 +17,20 @@ int Chunk::writeConstant(const Value& value, int line)
 {
     int index = addConstant(value);
     if (index < 256) {
-        writeChunk(CONSTANT, line);
-        writeChunk(index, line);
+        writeChunk(OP_CODE::CONSTANT, line);
+        writeChunk(static_cast<OP_CODE>(index), line);
     } else {
-        writeChunk(CONSTANT_LONG, line);
-        writeChunk((index & 0xff), line);
-        writeChunk(((index >> 8) & 0xff), line);
-        writeChunk(((index >> 16) & 0xff), line);
+        writeChunk(OP_CODE::CONSTANT_LONG, line);
+        writeChunk(cast((index & 0xff)), line);
+        writeChunk(cast((index >> 8) & 0xff), line);
+        writeChunk(cast((index >> 16) & 0xff), line);
     }
 
     return index;
 }
-void Chunk::writeChunk(uint8_t byte, int line)
+void Chunk::writeChunk(OP_CODE byte, int line)
 {
-    code.push_back(byte);
+    code.push_back(cast(byte));
     auto itr = std::find_if(lines.begin(), lines.end(), [line](const LineInfo& element) {
         return element.lineNumber == line;
     });
@@ -42,42 +42,47 @@ void Chunk::writeChunk(uint8_t byte, int line)
 
 int Chunk::disassembleInstruction(int offset)
 {
+    uint8_t instruction = code[offset];
+    OP_CODE opcode = cast(instruction);
     std::cout << std::format("{:04d} ", offset);
     printLineNumber(offset);
-    uint8_t instruction = code[offset];
     switch (instruction) {
-    case RETURN:
+    case cast(OP_CODE::RETURN):
         return simpleInstruction("OP_RETURN", offset);
-    case CONSTANT:
+    case cast(OP_CODE::CONSTANT):
         return constantInstruction("OP_CONSTANT", offset);
-    case CONSTANT_LONG:
+    case cast(OP_CODE::CONSTANT_LONG):
         return constantLongInstruction("OP_CONSTANT_LONG", offset);
-    case ADD:
+    case cast(OP_CODE::ADD):
         return simpleInstruction("OP_ADD", offset);
-    case MULT:
+    case cast(OP_CODE::MULT):
         return simpleInstruction("OP_MULTIPLY", offset);
-    case DIV:
+    case cast(OP_CODE::DIV):
         return simpleInstruction("OP_DIVIDE", offset);
-    case NEG:
+    case cast(OP_CODE::NEG):
         return simpleInstruction("OP_NEGATE", offset);
-    case NIL:
+    case cast(OP_CODE::NIL):
         return simpleInstruction("OP_NIL", offset);
-    case TRUE:
+    case cast(OP_CODE::TRUE):
         return simpleInstruction("OP_TRUE", offset);
-    case FALSE:
+    case cast(OP_CODE::FALSE):
         return simpleInstruction("OP_FALSE", offset);
-    case NOT:
+    case cast(OP_CODE::NOT):
         return simpleInstruction("OP_NOT", offset);
-    case GREATER:
+    case cast(OP_CODE::GREATER):
         return simpleInstruction("OP_GREATER", offset);
-    case LESS:
+    case cast(OP_CODE::LESS):
         return simpleInstruction("OP_LESS", offset);
-    case EQUAL:
+    case cast(OP_CODE::EQUAL):
         return simpleInstruction("OP_EQUAL", offset);
-    case PRINT:
+    case cast(OP_CODE::PRINT):
         return simpleInstruction("OP_PRINT", offset);
-    case POP:
+    case cast(OP_CODE::POP):
         return simpleInstruction("OP_POP", offset);
+    case cast(OP_CODE::DEFINE_GLOBAL):
+        return constantInstruction("OP_DEFINE_GLOBAL", offset);
+    case cast(OP_CODE::GET_GLOBAL):
+        return constantInstruction("OP_GET_GLOBAL", offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;

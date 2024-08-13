@@ -18,6 +18,7 @@ public:
     ~vMachine() = default;
     Value readConstant();
     Value readConstantLong();
+    std::unordered_map<std::string, Value> globals;
 
     void resetStack()
     {

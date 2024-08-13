@@ -1,5 +1,6 @@
 #pragma once
 #include "Chunk.h"
+#include "Instructions.h"
 #include "Token.h"
 #include <cstdint>
 #include <optional>
@@ -58,21 +59,22 @@ private:
     void printStatement();
     void expressionStatement();
     void statement();
-    void defineVariable(uint8_t global);
+    void defineVariable(OP_CODE global);
     void letDeclaration();
     void declaration();
-
+    void variable();
+    void namedVariable();
     /* ---- Emit Functions ---- */
-    void emitByte(uint8_t byte);
-    void emitBytes(uint8_t byte1, uint8_t byte2);
+    void emitByte(OP_CODE byte);
+    void emitBytes(OP_CODE byte1, OP_CODE byte2);
     void emitReturn();
     uint8_t parseVariable(const std::string& errorMessage);
     uint8_t identifierConstant(const Token& token);
     uint8_t emitConstant(const Value& value);
     void endCompiler();
-
+    void namedVariable(Token& token);
     /* ---- Make Functiones ---- */
-    uint8_t makeConstant(Value value);
+    OP_CODE makeConstant(Value value);
     Value makeString(const std::string& s);
 
     /* ---- Helper Functions ---- */

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Instructions.h"
 #include "Value.h"
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,7 +25,7 @@ public:
     std::vector<LineInfo> lines;
 
     int writeConstant(const Value&, int line);
-    void writeChunk(uint8_t byte, int line);
+    void writeChunk(OP_CODE byte, int line);
     void disassembleChunk(const std::string_view& name);
     int disassembleInstruction(int offset);
     int constantInstruction(const std::string& name, int offset) const;

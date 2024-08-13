@@ -82,7 +82,7 @@ Value Value::operator==(const Value& other) const
                                                     [](const auto&, const auto&) -> Value { return Value(false); } },
                                   a->as, b->as);
                           },
-                          [](const auto&, const auto&) { return Value(false); } },
+                          [](const auto&, const auto&) -> Value { return Value(false); } },
         as, other.as);
 }
 

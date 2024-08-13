@@ -12,17 +12,17 @@
 void Value::print() const
 {
     std::visit(overloaded {
-                   [](double d) { std::cout << std::format("{}", d); },
-                   [](bool b) { std::cout << (b ? "true" : "false"); },
-                   [](nullptr_t) { std::cout << "nil"; },
-                   [](Obj* obj) { obj->print(); } },
+                   [](double d) -> void { std::cout << std::format("{}", d); },
+                   [](bool b) -> void { std::cout << (b ? "true" : "false"); },
+                   [](nullptr_t) -> void { std::cout << "nil"; },
+                   [](Obj* obj) -> void { obj->print(); } },
         as);
 }
 
 Value Value::operator+(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) {
+                          [](double a, double b) -> Value {
                               return Value(a + b);
                           },
                           [](Obj* a, Obj* b) -> Value {
@@ -71,15 +71,15 @@ Value Value::operator+(const Value& other) const
 Value Value::operator==(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) { return Value(a == b); },
-                          [](bool a, bool b) { return Value(a == b); },
-                          [](nullptr_t, nullptr_t) { return Value(true); },
-                          [](Obj* a, Obj* b) {
+                          [](double a, double b) -> Value { return Value(a == b); },
+                          [](bool a, bool b) -> Value { return Value(a == b); },
+                          [](nullptr_t, nullptr_t) -> Value { return Value(true); },
+                          [](Obj* a, Obj* b) -> Value {
                               return std::visit(overloaded {
-                                                    [](const ObjString& sa, const ObjString& sb) {
+                                                    [](const ObjString& sa, const ObjString& sb) -> Value {
                                                         return Value(sa.str == sb.str);
                                                     },
-                                                    [](const auto&, const auto&) { return Value(false); } },
+                                                    [](const auto&, const auto&) -> Value { return Value(false); } },
                                   a->as, b->as);
                           },
                           [](const auto&, const auto&) { return Value(false); } },
@@ -95,7 +95,7 @@ Value& Value::operator+=(const Value& other)
 Value& Value::operator*=(const Value& other)
 {
     as = std::visit(overloaded {
-                        [](double a, double b) { return Value(a * b); },
+                        [](double a, double b) -> Value { return Value(a * b); },
                         [](const auto&, const auto&) -> Value {
                             throw std::runtime_error("Invalid operation: can only multiply numbers");
                         } },
@@ -107,7 +107,7 @@ Value& Value::operator*=(const Value& other)
 Value& Value::operator/=(const Value& other)
 {
     as = std::visit(overloaded {
-                        [](double a, double b) {
+                        [](double a, double b) -> Value {
                             if (b == 0)
                                 throw std::runtime_error("Division by zero");
                             return Value(a / b);
@@ -123,7 +123,7 @@ Value& Value::operator/=(const Value& other)
 Value Value::operator-() const
 {
     return std::visit(overloaded {
-                          [](double a) { return Value(-a); },
+                          [](double a) -> Value { return Value(-a); },
                           [](const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only negate numbers");
                           } },
@@ -142,7 +142,7 @@ Value Value::operator!() const
 Value Value::operator-(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) { return Value(a - b); },
+                          [](double a, double b) -> Value { return Value(a - b); },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only subtract numbers");
                           } },
@@ -152,7 +152,7 @@ Value Value::operator-(const Value& other) const
 Value Value::operator>(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) { return Value(a > b); },
+                          [](double a, double b) -> Value { return Value(a > b); },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only compare numbers");
                           } },

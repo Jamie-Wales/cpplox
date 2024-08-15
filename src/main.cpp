@@ -33,6 +33,7 @@ void runFile(std::string path)
 void repl()
 {
     std::string line;
+    vMachine vm;
     while (true) {
         std::cout << "> ";
         if (!std::getline(std::cin, line)) {
@@ -49,14 +50,12 @@ void repl()
         Compiler compiler { tokens };
         std::optional<Chunk> chunk = compiler.compile();
         if (chunk) {
-            vMachine vm { *chunk };
-            vm.run();
+            vm.execute(*chunk);  // Use execute instead ld of run
         } else {
             std::cerr << "Compilation failed." << std::endl;
         }
     }
 }
-
 int main(int argc, char* argv[])
 {
     test();

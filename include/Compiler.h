@@ -35,7 +35,7 @@ public:
 
 private:
     /* ---- Fields ---- */
-    using ParseFn = void (Compiler::*)();
+    using ParseFn = void (Compiler::*)(bool canAssign);
     struct ParseRule {
         ParseFn prefix;
         ParseFn infix;
@@ -51,28 +51,27 @@ private:
 
     /* ---- Parsing ---- */
     void expression();
-    void grouping();
-    void unary();
-    void binary();
-    void literal();
+    void grouping(bool canAssign);
+    void unary(bool canAssign);
+    void binary(bool canAssign);
+    void literal(bool canAssign);
     bool check(Tokentype type);
     void printStatement();
     void expressionStatement();
     void statement();
-    void defineVariable(OP_CODE global);
+    void defineVariable(uint8_t global);
     void letDeclaration();
     void declaration();
-    void variable();
-    void namedVariable();
+    void variable(bool canAssign);
+    void namedVariable(const Token& name, bool canAssign);
     /* ---- Emit Functions ---- */
-    void emitByte(OP_CODE byte);
-    void emitBytes(OP_CODE byte1, OP_CODE byte2);
+    void emitByte(uint8_t byte);
+    void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
     uint8_t parseVariable(const std::string& errorMessage);
     uint8_t identifierConstant(const Token& token);
     uint8_t emitConstant(const Value& value);
     void endCompiler();
-    void namedVariable(Token& token);
     /* ---- Make Functiones ---- */
     OP_CODE makeConstant(Value value);
     Value makeString(const std::string& s);

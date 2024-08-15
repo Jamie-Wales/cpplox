@@ -1,11 +1,11 @@
 #include "vMachine.h"
 #include "Instructions.h"
+#include <Stringinterner.h>
 #include <iostream>
 #include <ostream>
 #include <sstream>
 #include <string>
 #define DEBUG_TRACE_EXECUTION
-
 template <typename... Args>
 void vMachine::runtimeError(const char* format, Args&&... args)
 {
@@ -49,7 +49,12 @@ void vMachine::ensureStackSize(size_t size, const char* opcode)
         throw StackUnderflowError(opcode);
     }
 }
-
+void vMachine::execute(const Chunk& newInstructions)
+{
+    instructions = newInstructions;
+    ip = 0;
+    run();
+}
 void vMachine::run()
 {
     try {
@@ -109,16 +114,35 @@ void vMachine::run()
                 stack.pop();
                 break;
             case cast(OP_CODE::DEFINE_GLOBAL): {
-                auto variable = stack.top();
+                auto name = readConstant();
+                auto value = stack.top();
                 stack.pop();
-                auto name = stack.top();
-                stack.pop();
-                globals[name.to_string()] = variable;
-            } break;
+                auto internedString = StringInterner::instance().find(name.to_string());
+                if (!internedString) {
+                    std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
+                } else {
+                    if (globals.find(*internedString) != globals.end()) {
+                        runtimeError("Cannot redefine previously defined variable", internedString);
+                    }
+                    globals[*internedString] = value;
+                }
+                break;
+            }
+            case cast(OP_CODE::SET_GLOBAL): {
+                auto name = readConstant();
+                globals[name.to_string()] = stack.top();
+                break;
+            }
             case cast(OP_CODE::GET_GLOBAL): {
-                auto constant = readConstant();
-                constant.print();
-            } break;
+                auto name = readConstant();
+                stack.pop();
+                auto it = globals.find(name.to_string());
+                if (it == globals.end()) {
+                    runtimeError("Undefined variable '%s'.", name.to_string().c_str());
+                }
+                stack.push(it->second);
+                break;
+            }
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
@@ -126,7 +150,7 @@ void vMachine::run()
     } catch (const StackUnderflowError& e) {
         std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;
-        stack = std::stack<Value>(); // Clear the stack
+        stack = std::stack<Value>();
     } catch (const std::exception& e) {
         std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;

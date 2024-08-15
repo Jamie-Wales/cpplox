@@ -6,7 +6,7 @@ private:
 
 public:
     const std::string* intern(const std::string& s);
-    const std::string* find(const std::string& s) const;
+    [[nodiscard]] const std::string* find(const std::string& s) const;
     static StringInterner& instance()
     {
         static StringInterner interner;

@@ -15,35 +15,34 @@ void Chunk::disassembleChunk(const std::string_view& name)
 
 int Chunk::writeConstant(const Value& value, int line)
 {
-    int index = addConstant(value);
+    const int index = addConstant(value);
     if (index < 256) {
-        writeChunk(OP_CODE::CONSTANT, line);
-        writeChunk(static_cast<OP_CODE>(index), line);
+        writeChunk(cast(OP_CODE::CONSTANT), line);
+        writeChunk(index, line);
     } else {
-        writeChunk(OP_CODE::CONSTANT_LONG, line);
-        writeChunk(cast((index & 0xff)), line);
-        writeChunk(cast((index >> 8) & 0xff), line);
-        writeChunk(cast((index >> 16) & 0xff), line);
+        writeChunk(cast(OP_CODE::CONSTANT_LONG), line);
+        writeChunk((index & 0xff), line);
+        writeChunk((index >> 8) & 0xff, line);
+        writeChunk((index >> 16) & 0xff, line);
     }
 
     return index;
 }
-void Chunk::writeChunk(OP_CODE byte, int line)
+void Chunk::writeChunk(const uint8_t byte, int line)
 {
-    code.push_back(cast(byte));
-    auto itr = std::find_if(lines.begin(), lines.end(), [line](const LineInfo& element) {
-        return element.lineNumber == line;
-    });
-    if (itr == lines.end()) {
-        int size = code.size() - 1;
+    code.push_back(byte);
+    if (const auto itr = std::find_if(lines.begin(), lines.end(), [line](const LineInfo& element) {
+            return element.lineNumber == line;
+        });
+        itr == lines.end()) {
+        const int size = code.size() - 1;
         lines.push_back({ size, line });
     }
 }
 
-int Chunk::disassembleInstruction(int offset)
+int Chunk::disassembleInstruction(int offset) const
 {
     uint8_t instruction = code[offset];
-    OP_CODE opcode = cast(instruction);
     std::cout << std::format("{:04d} ", offset);
     printLineNumber(offset);
     switch (instruction) {
@@ -81,6 +80,8 @@ int Chunk::disassembleInstruction(int offset)
         return simpleInstruction("OP_POP", offset);
     case cast(OP_CODE::DEFINE_GLOBAL):
         return constantInstruction("OP_DEFINE_GLOBAL", offset);
+    case cast(OP_CODE::SET_GLOBAL):
+        return constantInstruction("OP_SET_GLOBAL", offset);
     case cast(OP_CODE::GET_GLOBAL):
         return constantInstruction("OP_GET_GLOBAL", offset);
     default:
@@ -89,7 +90,7 @@ int Chunk::disassembleInstruction(int offset)
     }
 }
 
-void Chunk::printLineNumber(int offset) const
+void Chunk::printLineNumber(const int offset) const
 {
     for (const auto& lineInfo : lines) {
         if (lineInfo.offset == offset) {

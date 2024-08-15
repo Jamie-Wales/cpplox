@@ -8,12 +8,14 @@
 
 class Chunk {
 public:
-    Chunk(int size)
+    explicit Chunk(const int size)
     {
         code.reserve(size);
         pool.reserve(size);
         lines.reserve(size);
-    };
+    }
+
+    Chunk() = default;
 
     struct LineInfo {
         int offset;
@@ -25,9 +27,9 @@ public:
     std::vector<LineInfo> lines;
 
     int writeConstant(const Value&, int line);
-    void writeChunk(OP_CODE byte, int line);
+    void writeChunk(uint8_t byte, int line);
     void disassembleChunk(const std::string_view& name);
-    int disassembleInstruction(int offset);
+    int disassembleInstruction(int offset) const;
     int constantInstruction(const std::string& name, int offset) const;
     int constantLongInstruction(const std::string& name, int offset) const;
     int simpleInstruction(const std::string& name, int offset) const;

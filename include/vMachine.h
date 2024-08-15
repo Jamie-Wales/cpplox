@@ -1,16 +1,19 @@
 #pragma once
 #include "Chunk.h"
 #include <stack>
+#include <utility>
 
 enum class vState { OK,
     BAD };
 
 class vMachine {
 public:
-    vMachine(Chunk chunk)
-        : instructions(chunk)
+    explicit vMachine(Chunk chunk)
+        : instructions(std::move(chunk))
     {
+        globals = {};
     }
+    vMachine() : globals{}, instructions{}, ip(0), stack{} {}
     vMachine(vMachine&&) = default;
     vMachine(const vMachine&) = default;
     vMachine& operator=(vMachine&&) = default;
@@ -26,11 +29,12 @@ public:
     }
     template <typename... Args>
     void runtimeError(const char* format, Args&&... args);
-    vState getState()
-    {
+    [[nodiscard]] vState getState() const {
         return this->state;
     }
     void run();
+    void execute(const Chunk &newInstructions);
+
 
 private:
     vState state = vState::OK;
@@ -43,4 +47,5 @@ private:
     void div();
     void neg();
     void ensureStackSize(size_t size, const char* opcode);
+
 };

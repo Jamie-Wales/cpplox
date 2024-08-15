@@ -1,12 +1,12 @@
 #pragma once
 #include <cstdint>
 
-enum class OP_CODE : uint8_t {
+enum class OP_CODE {
     ADD,
     MULT,
     PRINT,
     DEFINE_GLOBAL,
-    GET_GLOBAL,
+    SET_GLOBAL,
     POP,
     DIV,
     NEG,
@@ -19,7 +19,8 @@ enum class OP_CODE : uint8_t {
     GREATER,
     LESS,
     NOT,
-    RETURN
+    RETURN,
+    GET_GLOBAL
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

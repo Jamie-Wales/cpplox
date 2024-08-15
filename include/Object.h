@@ -5,7 +5,7 @@
 
 struct ObjString {
     const std::string* str;
-    ObjString(const std::string* s)
+    explicit ObjString(const std::string* s)
         : str(s)
     {
     }
@@ -22,10 +22,10 @@ public:
     std::variant<ObjString, ObjFunction, ObjInstance> as;
 
     template <typename T>
-    Obj(T value)
+    explicit Obj(T value)
         : as(std::move(value))
     {
     }
     void print() const;
-    std::string to_string() const;
+    [[nodiscard]] std::string to_string() const;
 };

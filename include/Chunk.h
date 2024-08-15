@@ -26,13 +26,16 @@ public:
     std::vector<Value> pool;
     std::vector<LineInfo> lines;
 
+    void disassembleChunk(const std::string_view &name) const;
+
     int writeConstant(const Value&, int line);
     void writeChunk(uint8_t byte, int line);
     void disassembleChunk(const std::string_view& name);
-    int disassembleInstruction(int offset) const;
-    int constantInstruction(const std::string& name, int offset) const;
-    int constantLongInstruction(const std::string& name, int offset) const;
-    int simpleInstruction(const std::string& name, int offset) const;
+    [[nodiscard]] int disassembleInstruction(int offset) const;
+    [[nodiscard]] int constantInstruction(const std::string& name, int offset) const;
+    [[nodiscard]] int constantLongInstruction(const std::string& name, int offset) const;
+
+    static int simpleInstruction(const std::string& name, int offset);
     int addConstant(const Value& value);
 
 private:

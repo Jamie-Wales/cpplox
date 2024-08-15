@@ -11,12 +11,12 @@ void vMachine::runtimeError(const char* format, Args&&... args)
 {
     std::ostringstream error_stream;
     (error_stream << ... << std::forward<Args>(args));
-    std::string error_message = error_stream.str();
+    const std::string error_message = error_stream.str();
 
     std::cerr << error_message << '\n';
 
-    size_t instruction = ip - 1;
-    int line = instructions.lines[instruction].lineNumber;
+    const size_t instruction = ip - 1;
+    const int line = instructions.lines[instruction].lineNumber;
     std::cerr << "[line " << line << "] in script\n";
     resetStack();
 }
@@ -30,21 +30,20 @@ Value vMachine::readConstant()
 
 Value vMachine::readConstantLong()
 {
-    uint32_t index = instructions.code[ip] | (instructions.code[ip + 1] << 8) | (instructions.code[ip + 2] << 16);
+    const uint32_t index = instructions.code[ip] | (instructions.code[ip + 1] << 8) | (instructions.code[ip + 2] << 16);
     ip += 3;
     return instructions.pool[index];
 }
 
-class StackUnderflowError : public std::runtime_error {
+class StackUnderflowError final : public std::runtime_error {
 public:
-    StackUnderflowError(const std::string& opcode)
+    explicit StackUnderflowError(const std::string& opcode)
         : std::runtime_error(std::format("Stack underflow occurred during {} operation", opcode))
     {
     }
 };
 
-void vMachine::ensureStackSize(size_t size, const char* opcode)
-{
+void vMachine::ensureStackSize(size_t size, const char* opcode) const {
     if (stack.size() < size) {
         throw StackUnderflowError(opcode);
     }
@@ -74,7 +73,7 @@ void vMachine::run()
 #endif
             switch (byte) {
             case cast(OP_CODE::RETURN): {
-                if (stack.size() > 0)
+                if (!stack.empty())
                     stack.pop();
                 state = vState::OK;
                 return;
@@ -121,7 +120,7 @@ void vMachine::run()
                 if (!internedString) {
                     std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
                 } else {
-                    if (globals.find(*internedString) != globals.end()) {
+                    if (globals.contains(*internedString)) {
                         runtimeError("Cannot redefine previously defined variable", internedString);
                     }
                     globals[*internedString] = value;
@@ -158,22 +157,21 @@ void vMachine::run()
 }
 void vMachine::add()
 {
-    auto right = stack.top();
+    const auto right = stack.top();
     stack.pop();
     stack.top() += right;
 }
 
 void vMachine::mult()
 {
-
-    auto right = stack.top();
+    const auto right = stack.top();
     stack.pop();
     stack.top() *= right;
 }
 
 void vMachine::div()
 {
-    auto right = stack.top();
+    const auto right = stack.top();
     stack.pop();
     stack.top() /= right;
 }

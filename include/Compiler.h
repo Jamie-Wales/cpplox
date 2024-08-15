@@ -25,7 +25,7 @@ enum class Precedence {
 
 class Compiler {
 public:
-    Compiler(const std::vector<Token>& tokens)
+    explicit Compiler(const std::vector<Token>& tokens)
         : tokens(tokens)
         , current(0)
     {
@@ -75,7 +75,8 @@ private:
     void endCompiler();
     /* ---- Make Functiones ---- */
     OP_CODE makeConstant(Value value);
-    Value makeString(const std::string& s);
+
+    static Value makeString(const std::string& s);
 
     /* ---- Helper Functions ---- */
     void parsePrecedence(Precedence precedence);

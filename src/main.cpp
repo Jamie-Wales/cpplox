@@ -14,7 +14,7 @@ std::string readFile(const std::string& path)
     return parsed_file;
 }
 
-void runFile(std::string path)
+void runFile(const std::string& path)
 {
     std::string source = readFile(path);
     Scanner scanner { source };

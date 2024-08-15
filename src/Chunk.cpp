@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-void Chunk::disassembleChunk(const std::string_view& name)
+void Chunk::disassembleChunk(const std::string_view& name) const
 {
     std::cout << std::format("== {} ==\n", name);
 
@@ -31,12 +31,12 @@ int Chunk::writeConstant(const Value& value, int line)
 void Chunk::writeChunk(const uint8_t byte, int line)
 {
     code.push_back(byte);
-    if (const auto itr = std::find_if(lines.begin(), lines.end(), [line](const LineInfo& element) {
+    if (const auto itr = std::ranges::find_if(lines, [line](const LineInfo& element) {
             return element.lineNumber == line;
         });
         itr == lines.end()) {
-        const int size = code.size() - 1;
-        lines.push_back({ size, line });
+        const size_t size = code.size() - 1;
+        lines.push_back({ static_cast<int>(size), line });
     }
 }
 
@@ -119,8 +119,7 @@ int Chunk::constantLongInstruction(const std::string& name, int offset) const
     return offset + 4;
 }
 
-int Chunk::simpleInstruction(const std::string& name, int offset) const
-{
+int Chunk::simpleInstruction(const std::string& name, const int offset) {
     std::cout << name << '\n';
     return offset + 1;
 }
@@ -128,5 +127,5 @@ int Chunk::simpleInstruction(const std::string& name, int offset) const
 int Chunk::addConstant(const Value& value)
 {
     pool.push_back(value);
-    return pool.size() - 1;
+    return static_cast<int>(pool.size() - 1);
 }

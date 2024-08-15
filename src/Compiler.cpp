@@ -119,7 +119,7 @@ std::optional<Chunk> Compiler::compile()
 Value Compiler::makeString(const std::string& s)
 {
     const std::string* internedString = StringInterner::instance().intern(s);
-    return Value(new Obj(ObjString(internedString)));
+    return {new Obj(ObjString(internedString))};
 }
 
 void Compiler::initRules()

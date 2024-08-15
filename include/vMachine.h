@@ -52,5 +52,5 @@ private:
     void mult();
     void div();
     void neg();
-    void ensureStackSize(size_t size, const char* opcode);
+    void ensureStackSize(size_t size, const char* opcode) const;
 };

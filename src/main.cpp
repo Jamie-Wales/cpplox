@@ -50,7 +50,7 @@ void repl()
         Compiler compiler { tokens };
         std::optional<Chunk> chunk = compiler.compile();
         if (chunk) {
-            vm.execute(*chunk);  // Use execute instead ld of run
+            vm.execute(*chunk); // Use execute instead ld of run
         } else {
             std::cerr << "Compilation failed." << std::endl;
         }

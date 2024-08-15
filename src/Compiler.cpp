@@ -119,7 +119,7 @@ std::optional<Chunk> Compiler::compile()
 Value Compiler::makeString(const std::string& s)
 {
     const std::string* internedString = StringInterner::instance().intern(s);
-    return {new Obj(ObjString(internedString))};
+    return { new Obj(ObjString(internedString)) };
 }
 
 void Compiler::initRules()
@@ -342,6 +342,13 @@ void Compiler::statement()
 {
     if (match(Tokentype::PRINT)) {
         printStatement();
+    } else if (match(Tokentype::LEFTBRACE)) {
+        scope++;
+        block();
+        scope--;
+        while (locals.size() > 0 && locals[locals.size() - 1].scopeDepth > scope) {
+            emitByte(cast(OP_CODE::POP));
+        }
     } else {
         expressionStatement();
     }
@@ -360,6 +367,9 @@ uint8_t Compiler::identifierConstant(const Token& token)
 uint8_t Compiler::parseVariable(const std::string& errorMessage)
 {
     consume(Tokentype::IDENTIFIER, errorMessage);
+    declareVariable();
+    if (scope > 0)
+        return 0;
     return identifierConstant(previous);
 }
 void Compiler::defineVariable(const uint8_t global)

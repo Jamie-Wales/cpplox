@@ -348,7 +348,14 @@ void Compiler::statement()
 }
 uint8_t Compiler::identifierConstant(const Token& token)
 {
-    return emitConstant(makeString(token.lexeme));
+    auto constant = makeString(token.lexeme);
+    Value indexValue;
+    auto it = stringConstants.find(constant.to_string());
+    if (it == stringConstants.end()) {
+        stringConstants[token.lexeme] = emitConstant(constant);
+        return stringConstants[token.lexeme];
+    }
+    return it->second;
 }
 uint8_t Compiler::parseVariable(const std::string& errorMessage)
 {

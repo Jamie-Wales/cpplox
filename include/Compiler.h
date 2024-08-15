@@ -41,6 +41,7 @@ private:
         ParseFn infix;
         Precedence precedence;
     };
+    std::unordered_map<std::string, int> stringConstants;
     Chunk currentChunk { 100 };
     const std::vector<Token>& tokens;
     bool hadError = false;

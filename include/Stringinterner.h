@@ -1,5 +1,6 @@
 #pragma once
 #include "unordered_set"
+
 class StringInterner {
 private:
     std::unordered_set<std::string> pool;

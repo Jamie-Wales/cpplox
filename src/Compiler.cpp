@@ -109,12 +109,81 @@ std::optional<Chunk> Compiler::compile()
     panicMode = false;
     while (!match(Tokentype::EOF_TOKEN)) {
         declaration();
-        std::cout << "After processing declaration, current token: " << tokenTypeToString(tokens[current].type) << std::endl;
+    }
+    endCompiler();
+    return hadError ? std::nullopt : std::make_optional(currentChunk);
+}
+
+bool Compiler::identifiersEqual(const Token& a, const Token& b)
+{
+    return a.lexeme == b.lexeme;
+}
+
+void Compiler::beginScope()
+{
+    scope++;
+}
+
+void Compiler::endScope()
+{
+    scope--;
+    while (!locals.empty() && locals.back().scopeDepth > scope) {
+        emitByte(cast(OP_CODE::POP));
+        locals.pop_back();
+    }
+}
+
+void Compiler::declareVariable()
+{
+    if (scope == 0)
+        return;
+
+    Token& name = previous;
+    for (size_t i = locals.size() - 1; i > -1; i--) {
+        Local* local = &locals[i];
+        if (local->scopeDepth != -1 && local->scopeDepth < scope) {
+            break;
+        }
+        if (local->token.lexeme == name.lexeme) {
+            error("Already a variable with this name in this scope.");
+        }
+    }
+    addLocal(name);
+}
+
+void Compiler::addLocal(Token& name)
+{
+    locals.emplace_back(Local { name, -1 });
+}
+
+void Compiler::markInitialized()
+{
+    if (scope == 0)
+        return;
+    locals.back().scopeDepth = scope;
+}
+
+int Compiler::resolveLocal(const Token& name)
+{
+    for (size_t i = locals.size() - 1; i >= 0; i--) {
+        Local* local = &locals[i];
+        if (name.lexeme == local->token.lexeme) {
+            if (local->scopeDepth == -1) {
+                error("Can't read local variable in its own initializer.");
+            }
+            return i;
+        }
+    }
+    return -1;
+}
+
+void Compiler::block()
+{
+    while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
+        declaration();
     }
 
-    endCompiler();
-
-    return hadError ? std::nullopt : std::make_optional(currentChunk);
+    consume(Tokentype::RIGHTBRACE, "Expect '}' after block.");
 }
 
 Value Compiler::makeString(const std::string& s)
@@ -201,9 +270,6 @@ void Compiler::expression()
 
 void Compiler::parsePrecedence(const Precedence precedence)
 {
-    std::cout << "Entering parsePrecedence with precedence: " << static_cast<int>(precedence) << std::endl;
-    std::cout << "Current token: " << tokenTypeToString(tokens[current].type) << ", lexeme: " << tokens[current].lexeme << std::endl;
-
     const bool canAssign = precedence <= Precedence::ASSIGNMENT;
     const ParseFn prefixRule = getRule(tokens[current].type).prefix;
     if (prefixRule == nullptr) {
@@ -211,20 +277,16 @@ void Compiler::parsePrecedence(const Precedence precedence)
         return;
     }
 
-    std::cout << "Calling prefix rule for token: " << tokenTypeToString(tokens[current].type) << std::endl;
     advance();
     (this->*prefixRule)(canAssign);
 
     while (precedence <= getRule(tokens[current].type).precedence) {
-        std::cout << "In while loop, current token: " << tokenTypeToString(tokens[current].type) << ", lexeme: " << tokens[current].lexeme << std::endl;
         advance();
         const ParseFn infixRule = getRule(previous.type).infix;
-        std::cout << "Calling infix rule for token: " << tokenTypeToString(previous.type) << std::endl;
         (this->*infixRule)(canAssign);
     }
-
-    std::cout << "Exiting parsePrecedence" << std::endl;
 }
+
 Compiler::ParseRule Compiler::getRule(const Tokentype type)
 {
     const auto it = rules.find(type);
@@ -254,9 +316,7 @@ void Compiler::unary(bool canAssign)
 
 void Compiler::binary(bool canAssign)
 {
-    std::cout << "Entering binary function" << std::endl;
     const Tokentype operatorType = previous.type;
-    std::cout << "Operator: " << tokenTypeToString(operatorType) << ", lexeme: " << previous.lexeme << std::endl;
     const ParseRule& rule = getRule(operatorType);
     parsePrecedence(static_cast<Precedence>(static_cast<int>(rule.precedence) + 1));
     switch (operatorType) {
@@ -267,7 +327,6 @@ void Compiler::binary(bool canAssign)
         emitBytes(cast(OP_CODE::NEG), cast(OP_CODE::ADD));
         break;
     case Tokentype::STAR:
-        std::cout << "Emitting MULT instruction" << std::endl;
         emitByte(cast(OP_CODE::MULT));
         break;
     case Tokentype::SLASH:
@@ -301,8 +360,8 @@ void Compiler::binary(bool canAssign)
         std::cout << "Unhandled binary operator: " << tokenTypeToString(operatorType) << std::endl;
         return;
     }
-    std::cout << "Exiting binary function" << std::endl;
 }
+
 void Compiler::literal(bool canAssign)
 {
     switch (previous.type) {
@@ -403,6 +462,7 @@ void Compiler::defineVariable(uint8_t global)
     }
     emitBytes(cast(OP_CODE::DEFINE_GLOBAL), global);
 }
+
 void Compiler::letDeclaration()
 {
     const uint8_t global = parseVariable("Expect variable name.");
@@ -447,6 +507,7 @@ void Compiler::namedVariable(Token& name, bool canAssign)
         emitBytes(getOp, static_cast<uint8_t>(arg));
     }
 }
+
 void Compiler::variable(const bool canAssign)
 {
     namedVariable(previous, canAssign);
@@ -460,8 +521,6 @@ void Compiler::declaration()
         letDeclaration();
     else
         statement();
-
-    std::cout << "After declaration, current token: " << tokenTypeToString(tokens[current].type) << std::endl;
 }
 
 bool Compiler::match(const Tokentype& type)

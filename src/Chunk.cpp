@@ -28,6 +28,7 @@ int Chunk::writeConstant(const Value& value, int line)
 
     return index;
 }
+
 void Chunk::writeChunk(const uint8_t byte, int line)
 {
     code.push_back(byte);
@@ -74,6 +75,14 @@ int Chunk::disassembleInstruction(int offset) const
         return simpleInstruction("OP_LESS", offset);
     case cast(OP_CODE::EQUAL):
         return simpleInstruction("OP_EQUAL", offset);
+    case cast(OP_CODE::GREATER_EQUAL):
+        return simpleInstruction("OP_GREATER_EQUAL", offset);
+    case cast(OP_CODE::LESS_EQUAL):
+        return simpleInstruction("OP_LESS_EQUAL", offset);
+    case cast(OP_CODE::AND):
+        return simpleInstruction("OP_AND", offset);
+    case cast(OP_CODE::OR):
+        return simpleInstruction("OP_OR", offset);
     case cast(OP_CODE::PRINT):
         return simpleInstruction("OP_PRINT", offset);
     case cast(OP_CODE::POP):
@@ -84,6 +93,10 @@ int Chunk::disassembleInstruction(int offset) const
         return constantInstruction("OP_SET_GLOBAL", offset);
     case cast(OP_CODE::GET_GLOBAL):
         return constantInstruction("OP_GET_GLOBAL", offset);
+    case cast(OP_CODE::SET_LOCAL):
+        return constantInstruction("OP_SET_LOCAL", offset);
+    case cast(OP_CODE::GET_LOCAL):
+        return constantInstruction("OP_GET_LOCAL", offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;

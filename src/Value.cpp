@@ -37,10 +37,11 @@ Value& Value::operator+=(const Value& other)
     *this = *this + other;
     return *this;
 }
+
 Value Value::operator&&(const Value& other) const
 {
     if (!this->isTruthy()) {
-        return *this; // Short-circuit evaluation
+        return *this;
     }
     return other;
 }
@@ -56,7 +57,7 @@ Value Value::operator||(const Value& other) const
 Value Value::operator<(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) -> Value { return Value(a < b); },
+                          [](double a, double b) -> Value { return { a < b }; },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only compare numbers");
                           } },
@@ -66,7 +67,7 @@ Value Value::operator<(const Value& other) const
 Value Value::operator>=(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) -> Value { return Value(a >= b); },
+                          [](double a, double b) -> Value { return { a >= b }; },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only compare numbers");
                           } },
@@ -83,10 +84,11 @@ bool Value::isTruthy() const
                               if (auto str = std::get_if<ObjString>(&obj->as)) {
                                   return !str->str->empty();
                               }
-                              return true; // Non-string objects are always truthy
+                              return true;
                           } },
         as);
 }
+
 Value Value::operator+(const Value& other) const
 {
     return std::visit(overloaded {
@@ -173,7 +175,7 @@ Value& Value::operator/=(const Value& other)
 Value Value::operator-() const
 {
     return std::visit(overloaded {
-                          [](double a) -> Value { return Value(-a); },
+                          [](double a) -> Value { return { -a }; },
                           [](const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only negate numbers");
                           } },
@@ -189,10 +191,11 @@ Value Value::operator!() const
                           [](Obj*) { return Value(false); } },
         as);
 }
+
 Value Value::operator-(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) -> Value { return Value(a - b); },
+                          [](double a, double b) -> Value { return { a - b }; },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only subtract numbers");
                           } },
@@ -202,7 +205,7 @@ Value Value::operator-(const Value& other) const
 Value Value::operator>(const Value& other) const
 {
     return std::visit(overloaded {
-                          [](double a, double b) -> Value { return Value(a > b); },
+                          [](double a, double b) -> Value { return { a > b }; },
                           [](const auto&, const auto&) -> Value {
                               throw std::runtime_error("Invalid operation: can only compare numbers");
                           } },

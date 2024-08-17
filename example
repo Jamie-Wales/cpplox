@@ -3,6 +3,8 @@ let a = "jamie";
 {
     let a = "wales";
     print(a);
+    a = "poop";
+    print(a);
 }
 print(a);
 }

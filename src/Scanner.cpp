@@ -1,5 +1,6 @@
 #include "Scanner.h"
 #include "Token.h"
+
 std::vector<Token> Scanner::tokenize()
 {
     std::vector<Token> allTokens;
@@ -57,6 +58,7 @@ void Scanner::updatePosition(const std::string& lexeme)
         }
     }
 }
+
 /* ---- dfa ---- */
 const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"(//.*(?:\n|$))"), Tokentype::COMMENT },
@@ -89,12 +91,13 @@ const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"([ \t]+)"), Tokentype::WHITESPACE },
     { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
 };
+
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "false", Tokentype::FALSE },
     { "true", Tokentype::TRUE },
     { "nil", Tokentype::NIL },
     { "print", Tokentype::PRINT },
     { "let", Tokentype::LET },
-    { "&&", Tokentype::AND },
-    { "||", Tokentype::OR }
+    { "and", Tokentype::AND },
+    { "or", Tokentype::OR }
 };

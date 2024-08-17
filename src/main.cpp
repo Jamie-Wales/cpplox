@@ -20,7 +20,6 @@ void runFile(const std::string& path)
     Scanner scanner { source };
     auto tokens = scanner.tokenize();
     Compiler compiler { tokens };
-
     std::optional<Chunk> chunk = compiler.compile();
     if (chunk) {
         vMachine vm { *chunk };

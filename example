@@ -1,3 +1,9 @@
-let a = "Jamie";
-let b = " Wales";
-print (a + b) * 100;
+{
+let a = "jamie";
+{
+    let a = "wales";
+    print(a);
+}
+print(a);
+}
+

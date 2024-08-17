@@ -1,6 +1,8 @@
 #include "Scanner.h"
+#include "Token.h"
 std::vector<Token> Scanner::tokenize()
 {
+    std::vector<Token> allTokens;
     auto it = input.begin();
     const auto end = input.end();
     while (it != end) {
@@ -8,16 +10,16 @@ std::vector<Token> Scanner::tokenize()
             if (token->type == Tokentype::UNTERMINATED_STRING || token->type == Tokentype::UNTERMINATED_COMMENT) {
                 throw std::runtime_error("Unterminated " + std::string(token->type == Tokentype::UNTERMINATED_STRING ? "string" : "comment") + " at line " + std::to_string(line) + ", column " + std::to_string(row));
             }
-            if (token->type != Tokentype::WHITESPACE) {
-                tokens.push_back(std::move(*token));
+            if (token->type != Tokentype::WHITESPACE && token->type != Tokentype::CARRIGERETURN) {
+                allTokens.push_back(std::move(*token));
             }
             updatePosition(token->lexeme);
         } else {
             throw std::runtime_error("Unexpected character at line " + std::to_string(line) + ", column " + std::to_string(row) + ": " + std::string(1, *it));
         }
     }
-    tokens.push_back(Token { Tokentype::EOF_TOKEN, "", line, row });
-    return tokens;
+    allTokens.emplace_back(Tokentype::EOF_TOKEN, "", line, row);
+    return allTokens;
 }
 
 std::optional<Token> Scanner::matchToken(std::string::const_iterator& it) const
@@ -42,16 +44,19 @@ std::optional<Token> Scanner::matchToken(std::string::const_iterator& it) const
 
 void Scanner::updatePosition(const std::string& lexeme)
 {
-    for (char c : lexeme) {
-        if (c == '\n') {
+    for (size_t i = 0; i < lexeme.length(); ++i) {
+        if (lexeme[i] == '\n' || (lexeme[i] == '\r' && (i + 1 == lexeme.length() || lexeme[i + 1] != '\n'))) {
             ++line;
             row = 1;
+        } else if (lexeme[i] == '\r' && i + 1 < lexeme.length() && lexeme[i + 1] == '\n') {
+            ++line;
+            row = 1;
+            ++i;
         } else {
             ++row;
         }
     }
 }
-
 /* ---- dfa ---- */
 const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"(//.*(?:\n|$))"), Tokentype::COMMENT },
@@ -80,8 +85,8 @@ const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"(\{)"), Tokentype::LEFTBRACE },
     { std::regex(R"(\})"), Tokentype::RIGHTBRACE },
     { std::regex(R"(;)"), Tokentype::SEMICOLON },
-    { std::regex(R"(\n|\r|$)"), Tokentype::CARRIGERETURN },
-    { std::regex(R"(\s+)"), Tokentype::WHITESPACE },
+    { std::regex(R"(\n|\r\n|\r)"), Tokentype::CARRIGERETURN },
+    { std::regex(R"([ \t]+)"), Tokentype::WHITESPACE },
     { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
 };
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
@@ -89,5 +94,7 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "true", Tokentype::TRUE },
     { "nil", Tokentype::NIL },
     { "print", Tokentype::PRINT },
-    { "let", Tokentype::LET }
+    { "let", Tokentype::LET },
+    { "&&", Tokentype::AND },
+    { "||", Tokentype::OR }
 };

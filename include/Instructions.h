@@ -2,9 +2,13 @@
 #include <cstdint>
 
 enum class OP_CODE {
+    AND,
+    OR,
     ADD,
     MULT,
     PRINT,
+    LESS_EQUAL,
+    GREATER_EQUAL,
     DEFINE_GLOBAL,
     SET_GLOBAL,
     POP,
@@ -20,7 +24,9 @@ enum class OP_CODE {
     LESS,
     NOT,
     RETURN,
-    GET_GLOBAL
+    GET_GLOBAL,
+    GET_LOCAL,
+    SET_LOCAL,
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

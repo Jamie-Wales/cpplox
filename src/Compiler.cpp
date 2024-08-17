@@ -109,6 +109,7 @@ std::optional<Chunk> Compiler::compile()
     panicMode = false;
     while (!match(Tokentype::EOF_TOKEN)) {
         declaration();
+        std::cout << "After processing declaration, current token: " << tokenTypeToString(tokens[current].type) << std::endl;
     }
 
     endCompiler();
@@ -124,9 +125,10 @@ Value Compiler::makeString(const std::string& s)
 
 void Compiler::initRules()
 {
+    rules[Tokentype::AND] = { nullptr, &Compiler::binary, Precedence::AND },
+    rules[Tokentype::OR] = { nullptr, &Compiler::binary, Precedence::OR },
     rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, Precedence::NONE };
     rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, Precedence::TERM };
-    rules[Tokentype::RIGHTPEREN] = { nullptr, nullptr, Precedence::NONE };
     rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, Precedence::TERM };
     rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, Precedence::FACTOR };
     rules[Tokentype::STAR] = { nullptr, &Compiler::binary, Precedence::FACTOR };
@@ -153,7 +155,7 @@ void Compiler::advance()
     }
 }
 
-void Compiler::consume(Tokentype type, const std::string& message)
+void Compiler::consume(const Tokentype type, const std::string& message)
 {
     if (tokens[current].type == type) {
         advance();
@@ -196,31 +198,36 @@ void Compiler::expression()
 {
     parsePrecedence(Precedence::ASSIGNMENT);
 }
-void Compiler::parsePrecedence(Precedence precedence)
+
+void Compiler::parsePrecedence(const Precedence precedence)
 {
-    bool canAssign = precedence <= Precedence::ASSIGNMENT;
-    ParseFn prefixRule = getRule(tokens[current].type).prefix;
+    std::cout << "Entering parsePrecedence with precedence: " << static_cast<int>(precedence) << std::endl;
+    std::cout << "Current token: " << tokenTypeToString(tokens[current].type) << ", lexeme: " << tokens[current].lexeme << std::endl;
+
+    const bool canAssign = precedence <= Precedence::ASSIGNMENT;
+    const ParseFn prefixRule = getRule(tokens[current].type).prefix;
     if (prefixRule == nullptr) {
         error("Expect expression.");
         return;
     }
 
+    std::cout << "Calling prefix rule for token: " << tokenTypeToString(tokens[current].type) << std::endl;
     advance();
     (this->*prefixRule)(canAssign);
 
     while (precedence <= getRule(tokens[current].type).precedence) {
+        std::cout << "In while loop, current token: " << tokenTypeToString(tokens[current].type) << ", lexeme: " << tokens[current].lexeme << std::endl;
         advance();
-        ParseFn infixRule = getRule(previous.type).infix;
+        const ParseFn infixRule = getRule(previous.type).infix;
+        std::cout << "Calling infix rule for token: " << tokenTypeToString(previous.type) << std::endl;
         (this->*infixRule)(canAssign);
     }
-    if (canAssign && match(Tokentype::EQUAL)) {
-        error("Invalid assignment target.");
-    }
-}
 
-Compiler::ParseRule Compiler::getRule(Tokentype type)
+    std::cout << "Exiting parsePrecedence" << std::endl;
+}
+Compiler::ParseRule Compiler::getRule(const Tokentype type)
 {
-    auto it = rules.find(type);
+    const auto it = rules.find(type);
     return it != rules.end() ? it->second : ParseRule { nullptr, nullptr, Precedence::NONE };
 }
 
@@ -229,9 +236,10 @@ void Compiler::grouping(bool canAssign)
     expression();
     consume(Tokentype::RIGHTPEREN, "Expect ')' after expression.");
 }
+
 void Compiler::unary(bool canAssign)
 {
-    Tokentype operatorType = previous.type;
+    const Tokentype& operatorType = previous.type;
     parsePrecedence(Precedence::UNARY);
     switch (operatorType) {
     case Tokentype::MINUS:
@@ -246,10 +254,11 @@ void Compiler::unary(bool canAssign)
 
 void Compiler::binary(bool canAssign)
 {
-    Tokentype operatorType = previous.type;
-    ParseRule rule = getRule(operatorType);
+    std::cout << "Entering binary function" << std::endl;
+    const Tokentype operatorType = previous.type;
+    std::cout << "Operator: " << tokenTypeToString(operatorType) << ", lexeme: " << previous.lexeme << std::endl;
+    const ParseRule& rule = getRule(operatorType);
     parsePrecedence(static_cast<Precedence>(static_cast<int>(rule.precedence) + 1));
-
     switch (operatorType) {
     case Tokentype::PLUS:
         emitByte(cast(OP_CODE::ADD));
@@ -258,6 +267,7 @@ void Compiler::binary(bool canAssign)
         emitBytes(cast(OP_CODE::NEG), cast(OP_CODE::ADD));
         break;
     case Tokentype::STAR:
+        std::cout << "Emitting MULT instruction" << std::endl;
         emitByte(cast(OP_CODE::MULT));
         break;
     case Tokentype::SLASH:
@@ -281,11 +291,18 @@ void Compiler::binary(bool canAssign)
     case Tokentype::LESS_EQUAL:
         emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
         break;
+    case Tokentype::AND:
+        emitByte(cast(OP_CODE::AND));
+        break;
+    case Tokentype::OR:
+        emitByte(cast(OP_CODE::OR));
+        break;
     default:
+        std::cout << "Unhandled binary operator: " << tokenTypeToString(operatorType) << std::endl;
         return;
     }
+    std::cout << "Exiting binary function" << std::endl;
 }
-
 void Compiler::literal(bool canAssign)
 {
     switch (previous.type) {
@@ -310,6 +327,7 @@ void Compiler::literal(bool canAssign)
         return;
     }
 }
+
 void Compiler::emitReturn()
 {
     emitByte(cast(OP_CODE::RETURN));
@@ -320,17 +338,20 @@ uint8_t Compiler::emitConstant(const Value& value)
     return currentChunk.writeConstant(value, previous.line);
 }
 
-bool Compiler::check(Tokentype type)
+bool Compiler::check(const Tokentype type) const
 {
     return tokens[current].type == type;
 }
 
 void Compiler::printStatement()
 {
+    consume(Tokentype::LEFTPEREN, "Expect '(' after 'print'.");
     expression();
-    consume(Tokentype::SEMICOLON, "Expect ';' after value.");
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after expression in print statement.");
+    consume(Tokentype::SEMICOLON, "Expect ';' after print statement.");
     emitByte(cast(OP_CODE::PRINT));
 }
+
 void Compiler::expressionStatement()
 {
     expression();
@@ -343,17 +364,15 @@ void Compiler::statement()
     if (match(Tokentype::PRINT)) {
         printStatement();
     } else if (match(Tokentype::LEFTBRACE)) {
-        scope++;
+        beginScope();
         block();
-        scope--;
-        while (locals.size() > 0 && locals[locals.size() - 1].scopeDepth > scope) {
-            emitByte(cast(OP_CODE::POP));
-        }
+        endScope();
     } else {
         expressionStatement();
     }
 }
-uint8_t Compiler::identifierConstant(const Token& token)
+
+uint8_t Compiler::identifierConstant(Token& token)
 {
     auto constant = makeString(token.lexeme);
     Value indexValue;
@@ -364,21 +383,29 @@ uint8_t Compiler::identifierConstant(const Token& token)
     }
     return it->second;
 }
+
 uint8_t Compiler::parseVariable(const std::string& errorMessage)
 {
     consume(Tokentype::IDENTIFIER, errorMessage);
+
     declareVariable();
     if (scope > 0)
         return 0;
+
     return identifierConstant(previous);
 }
-void Compiler::defineVariable(const uint8_t global)
+
+void Compiler::defineVariable(uint8_t global)
 {
+    if (scope > 0) {
+        markInitialized();
+        return;
+    }
     emitBytes(cast(OP_CODE::DEFINE_GLOBAL), global);
 }
 void Compiler::letDeclaration()
 {
-    uint8_t global = parseVariable("Expect variable name.");
+    const uint8_t global = parseVariable("Expect variable name.");
     if (match(Tokentype::EQUAL)) {
         expression();
     } else {
@@ -399,17 +426,28 @@ void Compiler::emitBytes(const uint8_t byte1, const uint8_t byte2)
     emitByte(byte1);
     emitByte(byte2);
 }
-void Compiler::namedVariable(const Token& name, const bool canAssign)
+
+void Compiler::namedVariable(Token& name, bool canAssign)
 {
-    uint8_t arg = identifierConstant(name);
+    uint8_t getOp, setOp;
+    int arg = resolveLocal(name);
+    if (arg != -1) {
+        getOp = cast(OP_CODE::GET_LOCAL);
+        setOp = cast(OP_CODE::SET_LOCAL);
+    } else {
+        arg = identifierConstant(name);
+        getOp = cast(OP_CODE::GET_GLOBAL);
+        setOp = cast(OP_CODE::SET_GLOBAL);
+    }
+
     if (canAssign && match(Tokentype::EQUAL)) {
         expression();
-        emitBytes(cast(OP_CODE::SET_GLOBAL), arg);
+        emitBytes(setOp, static_cast<uint8_t>(arg));
     } else {
-        emitBytes(cast(OP_CODE::GET_GLOBAL), arg);
+        emitBytes(getOp, static_cast<uint8_t>(arg));
     }
 }
-void Compiler::variable(bool canAssign)
+void Compiler::variable(const bool canAssign)
 {
     namedVariable(previous, canAssign);
 }
@@ -422,9 +460,11 @@ void Compiler::declaration()
         letDeclaration();
     else
         statement();
+
+    std::cout << "After declaration, current token: " << tokenTypeToString(tokens[current].type) << std::endl;
 }
 
-bool Compiler::match(Tokentype type)
+bool Compiler::match(const Tokentype& type)
 {
     if (!check(type))
         return false;

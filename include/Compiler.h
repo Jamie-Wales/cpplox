@@ -26,7 +26,8 @@ enum class Precedence {
 
 struct Local {
     Token* token;
-    size_t scopeDepth;
+    int scopeDepth;
+    bool initialized;
 };
 
 class Compiler {
@@ -47,16 +48,8 @@ private:
         ParseFn infix;
         Precedence precedence;
     };
-    void block()
-    {
-        while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
-            declaration();
-        }
-
-        consume(Tokentype::RIGHTBRACE, "Expect '}' after block.");
-    }
-    size_t scope = 0;
-    std::array<Local, UINT_MAX + 1> locals = {};
+    int scope = 0;
+    std::vector<Local> locals = {};
     std::unordered_map<std::string, int> stringConstants;
     Chunk currentChunk { 100 };
     const std::vector<Token>& tokens;
@@ -72,7 +65,7 @@ private:
     void unary(bool canAssign);
     void binary(bool canAssign);
     void literal(bool canAssign);
-    bool check(Tokentype type);
+    bool check(Tokentype type) const;
     void printStatement();
     void expressionStatement();
     void statement();
@@ -80,41 +73,92 @@ private:
     void letDeclaration();
     void declaration();
     void variable(bool canAssign);
-    void namedVariable(const Token& name, bool canAssign);
+    void namedVariable(Token& name, bool canAssign);
     /* ---- Emit Functions ---- */
     void emitByte(uint8_t byte);
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
     uint8_t parseVariable(const std::string& errorMessage);
-    uint8_t identifierConstant(const Token& token);
+    uint8_t identifierConstant(Token& token);
     uint8_t emitConstant(const Value& value);
     void endCompiler();
     /* ---- Make Functiones ---- */
     OP_CODE makeConstant(Value value);
 
     static Value makeString(const std::string& s);
-    void addLocal(Token name)
+    bool identifiersEqual(const Token* a, const Token* b)
     {
-        locals.at(locals.size()) = Local { &name, scope };
+        return a->lexeme == b->lexeme;
+    }
+    void beginScope()
+    {
+        scope++;
+    }
+
+    void endScope()
+    {
+        scope--;
+        while (!locals.empty() && locals.back().scopeDepth > scope) {
+            emitByte(cast(OP_CODE::POP));
+            locals.pop_back();
+        }
     }
     void declareVariable()
     {
         if (scope == 0)
             return;
-        Token* name = &previous;
 
-        for (auto& local : locals) {
-            if (local.scopeDepth != 0 && local.scopeDepth < scope) {
+        Token* name = &previous;
+        for (int i = locals.size() - 1; i >= 0; i--) {
+            Local* local = &locals[i];
+            if (local->scopeDepth != -1 && local->scopeDepth < scope) {
                 break;
             }
-            if (name->lexeme == local.token->lexeme)
+            if (local->token->lexeme == name->lexeme) {
                 error("Already a variable with this name in this scope.");
+            }
         }
         addLocal(*name);
     }
+    void addLocal(Token name)
+    {
+        Local local;
+        local.token = &name;
+        local.scopeDepth = -1;
+        locals.push_back(local);
+    }
+
+    void markInitialized()
+    {
+        if (scope == 0)
+            return;
+        locals.back().scopeDepth = scope;
+    }
+    int resolveLocal(const Token& name)
+    {
+        for (int i = locals.size() - 1; i >= 0; i--) {
+            Local* local = &locals[i];
+            if (name.lexeme == local->token->lexeme) {
+                if (local->scopeDepth == -1) {
+                    error("Can't read local variable in its own initializer.");
+                }
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    void block()
+    {
+        while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
+            declaration();
+        }
+
+        consume(Tokentype::RIGHTBRACE, "Expect '}' after block.");
+    }
     /* ---- Helper Functions ---- */
     void parsePrecedence(Precedence precedence);
-    bool match(Tokentype type);
+    bool match(const Tokentype& type);
     void initRules();
     void advance();
     ParseRule getRule(Tokentype type);

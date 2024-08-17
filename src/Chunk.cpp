@@ -119,7 +119,8 @@ int Chunk::constantLongInstruction(const std::string& name, int offset) const
     return offset + 4;
 }
 
-int Chunk::simpleInstruction(const std::string& name, const int offset) {
+int Chunk::simpleInstruction(const std::string& name, const int offset)
+{
     std::cout << name << '\n';
     return offset + 1;
 }

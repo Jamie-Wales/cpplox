@@ -1,17 +1,21 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include <Stringinterner.h>
+#include <format>
 #include <iostream>
 #include <ostream>
 #include <sstream>
 #include <string>
+
 #define DEBUG_TRACE_EXECUTION
+
 template <typename... Args>
+
 void vMachine::runtimeError(const char* format, Args&&... args)
 {
-    std::ostringstream error_stream;
-    (error_stream << ... << std::forward<Args>(args));
-    const std::string error_message = error_stream.str();
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer), format, std::forward<Args>(args)...);
+    const std::string error_message(buffer);
 
     std::cerr << error_message << '\n';
 
@@ -43,48 +47,49 @@ public:
     }
 };
 
-void vMachine::ensureStackSize(size_t size, const char* opcode) const {
+void vMachine::ensureStackSize(size_t size, const char* opcode) const
+{
     if (stack.size() < size) {
         throw StackUnderflowError(opcode);
     }
 }
+
 void vMachine::execute(const Chunk& newInstructions)
 {
     instructions = newInstructions;
     ip = 0;
     run();
 }
+
 void vMachine::run()
 {
     try {
         while (ip < instructions.code.size()) {
             uint8_t byte = instructions.code[ip++];
 #ifdef DEBUG_TRACE_EXECUTION
-            std::cout << std::format("          ");
-            std::stack<Value> tempStack = stack;
-            while (!tempStack.empty()) {
-                std::cout << std::format("[ ");
-                tempStack.top().print();
-                std::cout << std::format(" ]");
-                tempStack.pop();
+            std::cout << "          ";
+            for (const auto& value : stack) {
+                std::cout << "[ ";
+                value.print();
+                std::cout << " ]";
             }
-            std::cout << std::format("\n");
+            std::cout << "\n";
             instructions.disassembleInstruction(ip - 1);
 #endif
             switch (byte) {
             case cast(OP_CODE::RETURN): {
                 if (!stack.empty())
-                    stack.pop();
+                    stack.pop_back();
                 state = vState::OK;
                 return;
             }
             case cast(OP_CODE::CONSTANT): {
                 Value constant = readConstant();
-                stack.push(constant);
+                stack.push_back(constant);
             } break;
             case cast(OP_CODE::CONSTANT_LONG): {
                 Value constant = readConstantLong();
-                stack.push(constant);
+                stack.push_back(constant);
                 break;
             }
             case cast(OP_CODE::ADD):
@@ -105,23 +110,23 @@ void vMachine::run()
                 break;
             case cast(OP_CODE::PRINT):
                 ensureStackSize(1, "PRINT");
-                stack.top().print();
-                stack.pop();
+                stack.back().print();
+                stack.pop_back();
                 std::cout << std::endl;
                 break;
             case cast(OP_CODE::POP):
-                stack.pop();
+                stack.pop_back();
                 break;
             case cast(OP_CODE::DEFINE_GLOBAL): {
                 auto name = readConstant();
-                auto value = stack.top();
-                stack.pop();
+                auto value = stack.back();
+                stack.pop_back();
                 auto internedString = StringInterner::instance().find(name.to_string());
                 if (!internedString) {
                     std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
                 } else {
                     if (globals.contains(*internedString)) {
-                        runtimeError("Cannot redefine previously defined variable", internedString);
+                        runtimeError("Cannot redefine previously defined variable {}", internedString->c_str());
                     }
                     globals[*internedString] = value;
                 }
@@ -129,19 +134,60 @@ void vMachine::run()
             }
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
-                globals[name.to_string()] = stack.top();
+                globals[name.to_string()] = stack.back();
                 break;
             }
             case cast(OP_CODE::GET_GLOBAL): {
                 auto name = readConstant();
-                stack.pop();
                 auto it = globals.find(name.to_string());
                 if (it == globals.end()) {
-                    runtimeError("Undefined variable '%s'.", name.to_string().c_str());
+                    runtimeError("Undefined variable '{}'.", name.to_string().c_str());
                 }
-                stack.push(it->second);
+                stack.push_back(it->second);
                 break;
             }
+            case cast(OP_CODE::GET_LOCAL): {
+                uint8_t slot = instructions.code[ip++];
+                stack.push_back(stack[slot]);
+                break;
+            }
+            case cast(OP_CODE::SET_LOCAL): {
+                uint8_t slot = instructions.code[ip++];
+                stack[slot] = stack.back();
+                break;
+            }
+            case cast(OP_CODE::AND):
+                ensureStackSize(2, "LOGICAL_AND");
+                logicalAnd();
+                break;
+            case cast(OP_CODE::OR):
+                ensureStackSize(2, "LOGICAL_OR");
+                logicalOr();
+                break;
+            case cast(OP_CODE::NOT):
+                ensureStackSize(1, "LOGICAL_NOT");
+                logicalNot();
+                break;
+            case cast(OP_CODE::GREATER):
+                ensureStackSize(2, "GREATER");
+                greater();
+                break;
+            case cast(OP_CODE::GREATER_EQUAL):
+                ensureStackSize(2, "GREATER_EQUAL");
+                greaterEqual();
+                break;
+            case cast(OP_CODE::LESS):
+                ensureStackSize(2, "LESS");
+                less();
+                break;
+            case cast(OP_CODE::LESS_EQUAL):
+                ensureStackSize(2, "LESS");
+                lessEqual();
+                break;
+            case cast(OP_CODE::EQUAL):
+                ensureStackSize(2, "EQUAL");
+                equal();
+                break;
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
@@ -149,34 +195,98 @@ void vMachine::run()
     } catch (const StackUnderflowError& e) {
         std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;
-        stack = std::stack<Value>();
+        stack.clear();
     } catch (const std::exception& e) {
         std::cerr << std::format("Runtime Error: {}\n", e.what());
         state = vState::BAD;
     }
 }
+
 void vMachine::add()
 {
-    const auto right = stack.top();
-    stack.pop();
-    stack.top() += right;
+    const auto b = stack.back();
+    stack.pop_back();
+    stack.back() += b;
 }
 
 void vMachine::mult()
 {
-    const auto right = stack.top();
-    stack.pop();
-    stack.top() *= right;
+    const auto& right = stack.back();
+    stack.pop_back();
+    stack.back() *= right;
 }
 
 void vMachine::div()
 {
-    const auto right = stack.top();
-    stack.pop();
-    stack.top() /= right;
+    const auto& right = stack.back();
+    stack.pop_back();
+    stack.back() /= right;
 }
 
 void vMachine::neg()
 {
-    stack.top() = -stack.top();
+    stack.back() = -stack.back();
+}
+
+void vMachine::resetStack()
+{
+    stack.clear();
+}
+void vMachine::logicalAnd()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = a && b;
+}
+
+void vMachine::logicalOr()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = a || b;
+}
+
+void vMachine::logicalNot()
+{
+    stack.back() = !stack.back();
+}
+void vMachine::greater()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = a > b;
+}
+
+void vMachine::less()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = a < b;
+}
+
+void vMachine::equal()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = a == b;
+}
+void vMachine::greaterEqual()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = !(a < b);
+}
+
+void vMachine::lessEqual()
+{
+    const auto b = stack.back();
+    stack.pop_back();
+    const auto& a = stack.back();
+    stack.back() = !(a > b);
 }

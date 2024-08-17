@@ -28,11 +28,6 @@ public:
     Value readConstant();
     Value readConstantLong();
     std::unordered_map<std::string, Value> globals;
-
-    void resetStack()
-    {
-        stack = {};
-    }
     template <typename... Args>
     void runtimeError(const char* format, Args&&... args);
     [[nodiscard]] vState getState() const
@@ -46,11 +41,20 @@ private:
     vState state = vState::OK;
     Chunk instructions;
     int ip = 0;
-    std::stack<Value> stack;
+    std::vector<Value> stack;
     void add();
     void sub();
     void mult();
     void div();
     void neg();
+    void logicalAnd();
+    void logicalOr();
+    void logicalNot();
+    void resetStack();
+    void greater();
+    void equal();
+    void less();
+    void greaterEqual();
+    void lessEqual();
     void ensureStackSize(size_t size, const char* opcode) const;
 };

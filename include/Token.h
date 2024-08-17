@@ -30,6 +30,8 @@ enum class Tokentype {
     CARRIGERETURN,
     WHITESPACE,
     EOF_TOKEN,
+    AND,
+    OR,
     NIL,
     EQUAL,
     EQUAL_EQUAL,
@@ -51,10 +53,10 @@ enum class Tokentype {
 struct Token {
     Tokentype type;
     std::string lexeme;
-    int line{};
-    int column{};
+    int line {};
+    int column {};
 
-    Token(Tokentype type, std::string lexeme, int line, int column)
+    Token(const Tokentype type, std::string lexeme, const int line, const int column)
         : type(type)
         , lexeme(std::move(lexeme))
         , line(line)

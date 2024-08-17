@@ -28,12 +28,25 @@ struct Value {
         : as(obj)
     {
     }
-    std::string to_string();
+    [[nodiscard]] bool isString() const;
+    [[nodiscard]] bool isNumber() const;
+    [[nodiscard]] std::string toString() const;
+    [[nodiscard]] double asNumber() const;
+
+    bool isTruthy() const;
     void print() const;
+
+    std::string to_string() const;
+    Value operator&&(const Value& other) const;
+    Value operator||(const Value& other) const;
+
+    Value operator>=(const Value& other) const;
+    Value operator<(const Value& other) const;
+    Value operator*(const Value& other) const;
     Value operator+(const Value& other) const;
     Value operator==(const Value& other) const;
     Value& operator+=(const Value& other);
-    Value& operator*=(const Value& other);
+    Value operator*=(const Value& other);
     Value& operator/=(const Value& other);
     Value operator-() const;
     Value operator!() const;

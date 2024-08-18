@@ -28,7 +28,7 @@ enum class Precedence {
 struct Local {
     Token& token;
     int scopeDepth;
-    bool isConst;  // New field
+    bool isConst;
 };
 
 class Compiler {
@@ -101,6 +101,6 @@ private:
     void declareVariable();
     void markInitialized();
     void block();
-    int resolveLocal(const Token &name);
-    void addLocal(Token &name);
+    int resolveLocal(const Token& name);
+    void addLocal(Token& name);
 };

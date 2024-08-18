@@ -10,96 +10,96 @@
 std::string tokenTypeToString(Tokentype type)
 {
     switch (type) {
-        case Tokentype::FLOAT:
-            return "FLOAT";
-        case Tokentype::INTEGER:
-            return "INTEGER";
-        case Tokentype::BANG:
-            return "BANG";
-        case Tokentype::TRUE:
-            return "TRUE";
-        case Tokentype::FALSE:
-            return "FALSE";
-        case Tokentype::STRING:
-            return "STRING";
-        case Tokentype::PLUS:
-            return "PLUS";
-        case Tokentype::MINUS:
-            return "MINUS";
-        case Tokentype::LET:
-            return "LET";
-        case Tokentype::STAR:
-            return "STAR";
-        case Tokentype::SLASH:
-            return "SLASH";
-        case Tokentype::RIGHTPEREN:
-            return "RIGHTPEREN";
-        case Tokentype::RIGHTBRACE:
-            return "RIGHTBRACE";
-        case Tokentype::LEFTPEREN:
-            return "LEFTPEREN";
-        case Tokentype::LEFTBRACE:
-            return "LEFTBRACE";
-        case Tokentype::SEMICOLON:
-            return "SEMICOLON";
-        case Tokentype::IDENTIFIER:
-            return "IDENTIFIER";
-        case Tokentype::FOR:
-            return "FOR";
-        case Tokentype::IF:
-            return "IF";
-        case Tokentype::CLASS:
-            return "CLASS";
-        case Tokentype::FUN:
-            return "FUN";
-        case Tokentype::WHILE:
-            return "WHILE";
-        case Tokentype::PRINT:
-            return "PRINT";
-        case Tokentype::ERROR:
-            return "ERROR";
-        case Tokentype::RETURN:
-            return "RETURN";
-        case Tokentype::CARRIGERETURN:
-            return "CARRIGERETURN";
-        case Tokentype::WHITESPACE:
-            return "WHITESPACE";
-        case Tokentype::EOF_TOKEN:
-            return "EOF_TOKEN";
-        case Tokentype::NIL:
-            return "NIL";
-        case Tokentype::EQUAL:
-            return "EQUAL";
-        case Tokentype::EQUAL_EQUAL:
-            return "EQUAL_EQUAL";
-        case Tokentype::BANG_EQUAL:
-            return "BANG_EQUAL";
-        case Tokentype::LESS:
-            return "LESS";
-        case Tokentype::LESS_EQUAL:
-            return "LESS_EQUAL";
-        case Tokentype::GREATER:
-            return "GREATER";
-        case Tokentype::GREATER_EQUAL:
-            return "GREATER_EQUAL";
-        case Tokentype::PLUS_EQUAL:
-            return "PLUS_EQUAL";
-        case Tokentype::MINUS_EQUAL:
-            return "MINUS_EQUAL";
-        case Tokentype::STAR_EQUAL:
-            return "STAR_EQUAL";
-        case Tokentype::SLASH_EQUAL:
-            return "SLASH_EQUAL";
-        case Tokentype::COMMENT:
-            return "COMMENT";
-        case Tokentype::UNTERMINATED_STRING:
-            return "UNTERMINATED_STRING";
-        case Tokentype::UNTERMINATED_COMMENT:
-            return "UNTERMINATED_COMMENT";
-        case Tokentype::UNKNOWN:
-            return "UNKNOWN";
-        default:
-            return "UNDEFINED_TOKEN_TYPE";
+    case Tokentype::FLOAT:
+        return "FLOAT";
+    case Tokentype::INTEGER:
+        return "INTEGER";
+    case Tokentype::BANG:
+        return "BANG";
+    case Tokentype::TRUE:
+        return "TRUE";
+    case Tokentype::FALSE:
+        return "FALSE";
+    case Tokentype::STRING:
+        return "STRING";
+    case Tokentype::PLUS:
+        return "PLUS";
+    case Tokentype::MINUS:
+        return "MINUS";
+    case Tokentype::LET:
+        return "LET";
+    case Tokentype::STAR:
+        return "STAR";
+    case Tokentype::SLASH:
+        return "SLASH";
+    case Tokentype::RIGHTPEREN:
+        return "RIGHTPEREN";
+    case Tokentype::RIGHTBRACE:
+        return "RIGHTBRACE";
+    case Tokentype::LEFTPEREN:
+        return "LEFTPEREN";
+    case Tokentype::LEFTBRACE:
+        return "LEFTBRACE";
+    case Tokentype::SEMICOLON:
+        return "SEMICOLON";
+    case Tokentype::IDENTIFIER:
+        return "IDENTIFIER";
+    case Tokentype::FOR:
+        return "FOR";
+    case Tokentype::IF:
+        return "IF";
+    case Tokentype::CLASS:
+        return "CLASS";
+    case Tokentype::FUN:
+        return "FUN";
+    case Tokentype::WHILE:
+        return "WHILE";
+    case Tokentype::PRINT:
+        return "PRINT";
+    case Tokentype::ERROR:
+        return "ERROR";
+    case Tokentype::RETURN:
+        return "RETURN";
+    case Tokentype::CARRIGERETURN:
+        return "CARRIGERETURN";
+    case Tokentype::WHITESPACE:
+        return "WHITESPACE";
+    case Tokentype::EOF_TOKEN:
+        return "EOF_TOKEN";
+    case Tokentype::NIL:
+        return "NIL";
+    case Tokentype::EQUAL:
+        return "EQUAL";
+    case Tokentype::EQUAL_EQUAL:
+        return "EQUAL_EQUAL";
+    case Tokentype::BANG_EQUAL:
+        return "BANG_EQUAL";
+    case Tokentype::LESS:
+        return "LESS";
+    case Tokentype::LESS_EQUAL:
+        return "LESS_EQUAL";
+    case Tokentype::GREATER:
+        return "GREATER";
+    case Tokentype::GREATER_EQUAL:
+        return "GREATER_EQUAL";
+    case Tokentype::PLUS_EQUAL:
+        return "PLUS_EQUAL";
+    case Tokentype::MINUS_EQUAL:
+        return "MINUS_EQUAL";
+    case Tokentype::STAR_EQUAL:
+        return "STAR_EQUAL";
+    case Tokentype::SLASH_EQUAL:
+        return "SLASH_EQUAL";
+    case Tokentype::COMMENT:
+        return "COMMENT";
+    case Tokentype::UNTERMINATED_STRING:
+        return "UNTERMINATED_STRING";
+    case Tokentype::UNTERMINATED_COMMENT:
+        return "UNTERMINATED_COMMENT";
+    case Tokentype::UNKNOWN:
+        return "UNKNOWN";
+    default:
+        return "UNDEFINED_TOKEN_TYPE";
     }
 }
 
@@ -109,12 +109,12 @@ std::optional<Chunk> Compiler::compile()
     panicMode = false;
     while (!match(Tokentype::EOF_TOKEN)) {
         declaration();
-        if (panicMode) synchronize();
+        if (panicMode)
+            synchronize();
     }
     endCompiler();
     return hadError ? std::nullopt : std::make_optional(currentChunk);
 }
-
 
 void Compiler::beginScope()
 {
@@ -304,13 +304,13 @@ void Compiler::unary(bool canAssign)
     const Tokentype& operatorType = previous.type;
     parsePrecedence(Precedence::UNARY);
     switch (operatorType) {
-        case Tokentype::MINUS:
-            emitByte(cast(OP_CODE::NEG));
-            break;
-        case Tokentype::BANG:
-            emitByte(cast(OP_CODE::NOT));
-        default:
-            return;
+    case Tokentype::MINUS:
+        emitByte(cast(OP_CODE::NEG));
+        break;
+    case Tokentype::BANG:
+        emitByte(cast(OP_CODE::NOT));
+    default:
+        return;
     }
 }
 
@@ -320,70 +320,70 @@ void Compiler::binary(bool canAssign)
     const ParseRule& rule = getRule(operatorType);
     parsePrecedence(static_cast<Precedence>(static_cast<int>(rule.precedence) + 1));
     switch (operatorType) {
-        case Tokentype::PLUS:
-            emitByte(cast(OP_CODE::ADD));
-            break;
-        case Tokentype::MINUS:
-            emitBytes(cast(OP_CODE::NEG), cast(OP_CODE::ADD));
-            break;
-        case Tokentype::STAR:
-            emitByte(cast(OP_CODE::MULT));
-            break;
-        case Tokentype::SLASH:
-            emitByte(cast(OP_CODE::DIV));
-            break;
-        case Tokentype::BANG_EQUAL:
-            emitBytes(cast(OP_CODE::EQUAL), cast(OP_CODE::NOT));
-            break;
-        case Tokentype::EQUAL_EQUAL:
-            emitByte(cast(OP_CODE::EQUAL));
-            break;
-        case Tokentype::GREATER:
-            emitByte(cast(OP_CODE::GREATER));
-            break;
-        case Tokentype::GREATER_EQUAL:
-            emitBytes(cast(OP_CODE::LESS), cast(OP_CODE::NOT));
-            break;
-        case Tokentype::LESS:
-            emitByte(cast(OP_CODE::LESS));
-            break;
-        case Tokentype::LESS_EQUAL:
-            emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
-            break;
-        case Tokentype::AND:
-            emitByte(cast(OP_CODE::AND));
-            break;
-        case Tokentype::OR:
-            emitByte(cast(OP_CODE::OR));
-            break;
-        default:
-            std::cout << "Unhandled binary operator: " << tokenTypeToString(operatorType) << std::endl;
-            return;
+    case Tokentype::PLUS:
+        emitByte(cast(OP_CODE::ADD));
+        break;
+    case Tokentype::MINUS:
+        emitBytes(cast(OP_CODE::NEG), cast(OP_CODE::ADD));
+        break;
+    case Tokentype::STAR:
+        emitByte(cast(OP_CODE::MULT));
+        break;
+    case Tokentype::SLASH:
+        emitByte(cast(OP_CODE::DIV));
+        break;
+    case Tokentype::BANG_EQUAL:
+        emitBytes(cast(OP_CODE::EQUAL), cast(OP_CODE::NOT));
+        break;
+    case Tokentype::EQUAL_EQUAL:
+        emitByte(cast(OP_CODE::EQUAL));
+        break;
+    case Tokentype::GREATER:
+        emitByte(cast(OP_CODE::GREATER));
+        break;
+    case Tokentype::GREATER_EQUAL:
+        emitBytes(cast(OP_CODE::LESS), cast(OP_CODE::NOT));
+        break;
+    case Tokentype::LESS:
+        emitByte(cast(OP_CODE::LESS));
+        break;
+    case Tokentype::LESS_EQUAL:
+        emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
+        break;
+    case Tokentype::AND:
+        emitByte(cast(OP_CODE::AND));
+        break;
+    case Tokentype::OR:
+        emitByte(cast(OP_CODE::OR));
+        break;
+    default:
+        std::cout << "Unhandled binary operator: " << tokenTypeToString(operatorType) << std::endl;
+        return;
     }
 }
 
 void Compiler::literal(bool canAssign)
 {
     switch (previous.type) {
-        case Tokentype::TRUE:
-            emitByte(cast(OP_CODE::TRUE));
-            break;
-        case Tokentype::FALSE:
-            emitByte(cast(OP_CODE::FALSE));
-            break;
-        case Tokentype::INTEGER: {
-            double value = std::stod(previous.lexeme);
-            emitConstant(Value(value));
-        } break;
-        case Tokentype::STRING: {
-            std::string value = previous.lexeme.substr(1, previous.lexeme.length() - 2);
-            emitConstant(makeString(value));
-        } break;
-        case Tokentype::NIL:
-            emitByte(cast(OP_CODE::NIL));
-            break;
-        default:
-            return;
+    case Tokentype::TRUE:
+        emitByte(cast(OP_CODE::TRUE));
+        break;
+    case Tokentype::FALSE:
+        emitByte(cast(OP_CODE::FALSE));
+        break;
+    case Tokentype::INTEGER: {
+        double value = std::stod(previous.lexeme);
+        emitConstant(Value(value));
+    } break;
+    case Tokentype::STRING: {
+        std::string value = previous.lexeme.substr(1, previous.lexeme.length() - 2);
+        emitConstant(makeString(value));
+    } break;
+    case Tokentype::NIL:
+        emitByte(cast(OP_CODE::NIL));
+        break;
+    default:
+        return;
     }
 }
 
@@ -520,7 +520,6 @@ void Compiler::declaration()
     }
 }
 
-
 bool Compiler::match(const Tokentype& type)
 {
     if (!check(type))
@@ -534,22 +533,23 @@ void Compiler::synchronize()
     panicMode = false;
 
     while (current < tokens.size() && tokens[current].type != Tokentype::EOF_TOKEN) {
-        if (previous.type == Tokentype::SEMICOLON) return;
+        if (previous.type == Tokentype::SEMICOLON)
+            return;
 
         switch (tokens[current].type) {
-            case Tokentype::CLASS:
-            case Tokentype::FUN:
-            case Tokentype::LET:
-            case Tokentype::CONST:
-            case Tokentype::FOR:
-            case Tokentype::IF:
-            case Tokentype::WHILE:
-            case Tokentype::PRINT:
-            case Tokentype::RETURN:
-                return;
-            default:
-                // Do nothing
-                break;
+        case Tokentype::CLASS:
+        case Tokentype::FUN:
+        case Tokentype::LET:
+        case Tokentype::CONST:
+        case Tokentype::FOR:
+        case Tokentype::IF:
+        case Tokentype::WHILE:
+        case Tokentype::PRINT:
+        case Tokentype::RETURN:
+            return;
+        default:
+            // Do nothing
+            break;
         }
 
         advance();
@@ -566,7 +566,6 @@ void Compiler::namedVariable(Token& name, bool canAssign)
         if (canAssign && check(Tokentype::EQUAL)) {
             if (locals[arg].isConst) {
                 error("Cannot reassign to const local variable.");
-                // Don't return, continue processing
             }
             advance();
             expression();
@@ -581,7 +580,6 @@ void Compiler::namedVariable(Token& name, bool canAssign)
         if (canAssign && check(Tokentype::EQUAL)) {
             if (constGlobals.find(name.lexeme) != constGlobals.end()) {
                 error("Cannot reassign to const global variable.");
-                // Don't return, continue processing
             }
             advance();
             expression();

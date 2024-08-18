@@ -4,7 +4,6 @@
 #include <format>
 #include <iostream>
 #include <ostream>
-#include <sstream>
 #include <string>
 
 #define DEBUG_TRACE_EXECUTION

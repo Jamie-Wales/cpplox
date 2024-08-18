@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #define DEBUG_PRINT_CODE
@@ -27,6 +28,7 @@ enum class Precedence {
 struct Local {
     Token& token;
     int scopeDepth;
+    bool isConst;  // New field
 };
 
 class Compiler {
@@ -40,7 +42,7 @@ public:
     std::optional<Chunk> compile();
 
 private:
-    /* ---- Fields ---- */
+    std::unordered_set<std::string> constGlobals;
     using ParseFn = void (Compiler::*)(bool canAssign);
     struct ParseRule {
         ParseFn prefix;
@@ -69,10 +71,10 @@ private:
     void expressionStatement();
     void statement();
     void defineVariable(uint8_t global);
-    void letDeclaration();
     void declaration();
     void variable(bool canAssign);
     void namedVariable(Token& name, bool canAssign);
+    void variableDeclaration();
     /* ---- Emit Functions ---- */
     void emitByte(uint8_t byte);
     void emitBytes(uint8_t byte1, uint8_t byte2);
@@ -88,7 +90,7 @@ private:
     void initRules();
     void advance();
     ParseRule getRule(Tokentype type);
-    void consume(Tokentype type, const std::string& message);
+    bool consume(Tokentype type, const std::string& message);
     /* ---- Error Functions ---- */
     void synchronize();
     void errorAtCurrent(const std::string& message);
@@ -101,5 +103,4 @@ private:
     void block();
     int resolveLocal(const Token &name);
     void addLocal(Token &name);
-    bool identifiersEqual(const Token &a, const Token &b);
 };

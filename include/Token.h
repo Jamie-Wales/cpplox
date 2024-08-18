@@ -3,6 +3,7 @@
 
 enum class Tokentype {
     FLOAT,
+    CONST,
     INTEGER,
     BANG,
     TRUE,

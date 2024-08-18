@@ -99,5 +99,7 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "print", Tokentype::PRINT },
     { "let", Tokentype::LET },
     { "and", Tokentype::AND },
-    { "or", Tokentype::OR }
+    { "or", Tokentype::OR },
+    {"const", Tokentype::CONST
+    }
 };

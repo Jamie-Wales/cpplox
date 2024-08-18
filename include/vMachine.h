@@ -43,7 +43,6 @@ private:
     int ip = 0;
     std::vector<Value> stack;
     void add();
-    void sub();
     void mult();
     void div();
     void neg();

@@ -1,2 +1,6 @@
-const a = "jamie";
-a = "poop";
+let a = 0;
+
+while (a < 10) {
+    print("Jamie is cool");
+    a = a + 1;
+ }

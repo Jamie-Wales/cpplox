@@ -103,4 +103,5 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "const", Tokentype::CONST },
     { "if", Tokentype::IF },
     { "else", Tokentype::ELSE },
+    { "while", Tokentype::WHILE }
 };

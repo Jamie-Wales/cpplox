@@ -455,6 +455,35 @@ void Compiler::expressionStatement()
     }
     emitByte(cast(OP_CODE::POP));
 }
+void Compiler::emitLoop(int loopStart)
+{
+    emitByte(cast(OP_CODE::LOOP));
+
+    int offset = currentChunk.code.size() - loopStart + 2;
+    if (offset > UINT16_MAX)
+        error("Loop body too large.");
+
+    emitByte((offset >> 8) & 0xff);
+    emitByte(offset & 0xff);
+}
+
+void Compiler::whileStatement()
+{
+
+    int loopStart = currentChunk.code.size();
+    consume(Tokentype::LEFTPEREN, "Expect '(' after 'while'.");
+    expression();
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after condition.");
+
+    int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    emitByte(cast(OP_CODE::POP));
+    statement();
+    emitLoop(loopStart);
+
+    patchJump(exitJump);
+    emitByte(cast(OP_CODE::POP));
+}
+
 void Compiler::statement()
 {
     if (match(Tokentype::PRINT)) {
@@ -465,6 +494,8 @@ void Compiler::statement()
         endScope();
     } else if (match(Tokentype::IF)) {
         ifStatement();
+    } else if (match(Tokentype::WHILE)) {
+        whileStatement();
     } else {
         expressionStatement();
     }

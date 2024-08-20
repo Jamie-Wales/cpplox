@@ -80,7 +80,12 @@ void vMachine::run()
             instructions.disassembleInstruction(ip - 1);
 #endif
             switch (byte) {
+            case cast(OP_CODE::LOOP): {
+                uint16_t offset = readShort();
+                ip -= offset;
+            } break;
             case cast(OP_CODE::RETURN): {
+
                 if (!stack.empty())
                     stack.pop_back();
                 state = vState::OK;

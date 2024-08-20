@@ -59,6 +59,7 @@ private:
     std::unordered_map<Tokentype, ParseRule> rules;
 
     /* ---- Parsing ---- */
+    void emitLoop(int loopStart);
     void expression();
     void grouping(bool canAssign);
     void unary(bool canAssign);
@@ -86,6 +87,7 @@ private:
     uint8_t identifierConstant(Token& token);
     uint8_t emitConstant(const Value& value);
     void endCompiler();
+    void whileStatement();
     static Value makeString(const std::string& s);
     /* ---- Helper Functions ---- */
     void parsePrecedence(Precedence precedence);

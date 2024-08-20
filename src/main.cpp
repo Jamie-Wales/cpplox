@@ -46,10 +46,11 @@ void repl()
         Scanner scanner { line };
         auto tokens = scanner.tokenize();
         scanner.addEOFToken();
+        // #TOOD don't reuse compiler so const expressions work on repl
         Compiler compiler { tokens };
         std::optional<Chunk> chunk = compiler.compile();
         if (chunk) {
-            vm.execute(*chunk); // Use execute instead ld of run
+            vm.execute(*chunk);
         } else {
             std::cerr << "Compilation failed." << std::endl;
         }

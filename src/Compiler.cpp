@@ -192,8 +192,8 @@ Value Compiler::makeString(const std::string& s)
 
 void Compiler::initRules()
 {
-    rules[Tokentype::AND] = { nullptr, &Compiler::binary, Precedence::AND },
-    rules[Tokentype::OR] = { nullptr, &Compiler::binary, Precedence::OR },
+    rules[Tokentype::AND] = { nullptr, &Compiler::and_, Precedence::AND };
+    rules[Tokentype::OR] = { nullptr, &Compiler::or_, Precedence::OR };
     rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, Precedence::NONE };
     rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, Precedence::TERM };
     rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, Precedence::TERM };
@@ -350,12 +350,6 @@ void Compiler::binary(bool canAssign)
     case Tokentype::LESS_EQUAL:
         emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
         break;
-    case Tokentype::AND:
-        emitByte(cast(OP_CODE::AND));
-        break;
-    case Tokentype::OR:
-        emitByte(cast(OP_CODE::OR));
-        break;
     default:
         std::cout << "Unhandled binary operator: " << tokenTypeToString(operatorType) << std::endl;
         return;
@@ -402,6 +396,46 @@ bool Compiler::check(const Tokentype type) const
     return tokens[current].type == type;
 }
 
+int Compiler::emitJump(uint8_t instruction)
+{
+    emitByte(instruction);
+    emitByte(0xff);
+    emitByte(0xff);
+    return currentChunk.code.size() - 2;
+}
+
+void Compiler::patchJump(int offset)
+{
+    int jump = currentChunk.code.size() - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+    currentChunk.code[offset] = (jump >> 8) & 0xff;
+    currentChunk.code[offset + 1] = jump & 0xff;
+}
+
+void Compiler::ifStatement()
+{
+    consume(Tokentype::LEFTPEREN, "Expect '(' after 'if'.");
+    expression();
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after condition.");
+
+    int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    emitByte(cast(OP_CODE::POP)); // Pop the condition if it's true
+    statement();
+
+    int elseJump = emitJump(cast(OP_CODE::JUMP));
+
+    patchJump(thenJump);
+    emitByte(cast(OP_CODE::POP));
+
+    if (match(Tokentype::ELSE)) {
+        statement();
+    }
+
+    patchJump(elseJump);
+}
 void Compiler::printStatement()
 {
     consume(Tokentype::LEFTPEREN, "Expect '(' after 'print'.");
@@ -429,6 +463,8 @@ void Compiler::statement()
         beginScope();
         block();
         endScope();
+    } else if (match(Tokentype::IF)) {
+        ifStatement();
     } else {
         expressionStatement();
     }
@@ -527,7 +563,25 @@ bool Compiler::match(const Tokentype& type)
     advance();
     return true;
 }
+void Compiler::and_(bool canAssign)
+{
+    int endJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    emitByte(cast(OP_CODE::POP));
+    parsePrecedence(Precedence::AND);
+    patchJump(endJump);
+}
 
+void Compiler::or_(bool canAssign)
+{
+    int elseJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    int endJump = emitJump(cast(OP_CODE::JUMP));
+
+    patchJump(elseJump);
+    emitByte(cast(OP_CODE::POP));
+
+    parsePrecedence(Precedence::OR);
+    patchJump(endJump);
+}
 void Compiler::synchronize()
 {
     panicMode = false;
@@ -548,7 +602,6 @@ void Compiler::synchronize()
         case Tokentype::RETURN:
             return;
         default:
-            // Do nothing
             break;
         }
 

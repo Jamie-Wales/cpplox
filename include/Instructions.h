@@ -2,8 +2,6 @@
 #include <cstdint>
 
 enum class OP_CODE {
-    AND,
-    OR,
     ADD,
     MULT,
     PRINT,
@@ -27,6 +25,9 @@ enum class OP_CODE {
     GET_GLOBAL,
     GET_LOCAL,
     SET_LOCAL,
+    JUMP_IF_FALSE,
+    JUMP,
+    LOOP
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

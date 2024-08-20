@@ -1,15 +1,13 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include <Stringinterner.h>
+#include <cstdint>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
 
-#define DEBUG_TRACE_EXECUTION
-
 template <typename... Args>
-
 void vMachine::runtimeError(const char* format, Args&&... args)
 {
     char buffer[1024];
@@ -22,6 +20,12 @@ void vMachine::runtimeError(const char* format, Args&&... args)
     const int line = instructions.lines[instruction].lineNumber;
     std::cerr << "[line " << line << "] in script\n";
     resetStack();
+}
+
+int vMachine::readShort()
+{
+    ip += 2;
+    return ((instructions.code[ip - 2] << 8) | instructions.code[ip - 1]);
 }
 
 Value vMachine::readConstant()
@@ -80,8 +84,7 @@ void vMachine::run()
                 if (!stack.empty())
                     stack.pop_back();
                 state = vState::OK;
-                return;
-            }
+            } break;
             case cast(OP_CODE::CONSTANT): {
                 Value constant = readConstant();
                 stack.push_back(constant);
@@ -89,8 +92,13 @@ void vMachine::run()
             case cast(OP_CODE::CONSTANT_LONG): {
                 Value constant = readConstantLong();
                 stack.push_back(constant);
+            } break;
+            case cast(OP_CODE::TRUE):
+                stack.push_back({ true });
                 break;
-            }
+            case cast(OP_CODE::FALSE):
+                stack.push_back({ false });
+                break;
             case cast(OP_CODE::ADD):
                 ensureStackSize(2, "ADD");
                 add();
@@ -129,13 +137,11 @@ void vMachine::run()
                     }
                     globals[*internedString] = value;
                 }
-                break;
-            }
+            } break;
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
                 globals[name.to_string()] = stack.back();
-                break;
-            }
+            } break;
             case cast(OP_CODE::GET_GLOBAL): {
                 auto name = readConstant();
                 auto it = globals.find(name.to_string());
@@ -143,26 +149,15 @@ void vMachine::run()
                     runtimeError("Undefined variable '{}'.", name.to_string().c_str());
                 }
                 stack.push_back(it->second);
-                break;
-            }
+            } break;
             case cast(OP_CODE::GET_LOCAL): {
                 uint8_t slot = instructions.code[ip++];
                 stack.push_back(stack[slot]);
-                break;
-            }
+            } break;
             case cast(OP_CODE::SET_LOCAL): {
                 uint8_t slot = instructions.code[ip++];
                 stack[slot] = stack.back();
-                break;
-            }
-            case cast(OP_CODE::AND):
-                ensureStackSize(2, "LOGICAL_AND");
-                logicalAnd();
-                break;
-            case cast(OP_CODE::OR):
-                ensureStackSize(2, "LOGICAL_OR");
-                logicalOr();
-                break;
+            } break;
             case cast(OP_CODE::NOT):
                 ensureStackSize(1, "LOGICAL_NOT");
                 logicalNot();
@@ -187,6 +182,17 @@ void vMachine::run()
                 ensureStackSize(2, "EQUAL");
                 equal();
                 break;
+            case cast(OP_CODE::JUMP_IF_FALSE): {
+                ensureStackSize(1, "JUMP_IF_FALSE");
+                int offset = readShort();
+                if (!stack.back().isTruthy()) {
+                    ip += offset;
+                }
+            } break;
+            case cast(OP_CODE::JUMP): {
+                int offset = readShort();
+                ip += offset;
+            } break;
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
@@ -230,21 +236,6 @@ void vMachine::neg()
 void vMachine::resetStack()
 {
     stack.clear();
-}
-void vMachine::logicalAnd()
-{
-    const auto b = stack.back();
-    stack.pop_back();
-    const auto& a = stack.back();
-    stack.back() = a && b;
-}
-
-void vMachine::logicalOr()
-{
-    const auto b = stack.back();
-    stack.pop_back();
-    const auto& a = stack.back();
-    stack.back() = a || b;
 }
 
 void vMachine::logicalNot()

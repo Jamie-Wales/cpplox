@@ -1,9 +1,2 @@
-{
 const a = "jamie";
-print(a);
-{
-let a = "wales";
-print(a);
-}
-}
-
+a = "poop";

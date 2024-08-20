@@ -41,6 +41,8 @@ private:
     vState state = vState::OK;
     Chunk instructions;
     int ip = 0;
+
+    int readShort();
     std::vector<Value> stack;
     void add();
     void mult();

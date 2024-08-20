@@ -38,22 +38,6 @@ Value& Value::operator+=(const Value& other)
     return *this;
 }
 
-Value Value::operator&&(const Value& other) const
-{
-    if (!this->isTruthy()) {
-        return *this;
-    }
-    return other;
-}
-
-Value Value::operator||(const Value& other) const
-{
-    if (this->isTruthy()) {
-        return *this; // Short-circuit evaluation
-    }
-    return other;
-}
-
 Value Value::operator<(const Value& other) const
 {
     return std::visit(overloaded {

@@ -36,8 +36,6 @@ struct Value {
     void print() const;
     std::string to_string() const;
 
-    Value operator&&(const Value& other) const;
-    Value operator||(const Value& other) const;
     Value operator>=(const Value& other) const;
     Value operator<(const Value& other) const;
     Value operator*(const Value& other) const;

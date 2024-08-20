@@ -22,6 +22,7 @@ enum class Tokentype {
     IDENTIFIER,
     FOR,
     IF,
+    ELSE,
     CLASS,
     FUN,
     WHILE,

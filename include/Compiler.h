@@ -1,15 +1,11 @@
 #pragma once
 #include "Chunk.h"
-#include "Instructions.h"
 #include "Token.h"
-#include <climits>
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#define DEBUG_PRINT_CODE
 
 enum class Precedence {
     NONE,
@@ -42,6 +38,7 @@ public:
     std::optional<Chunk> compile();
 
 private:
+    // #TODO look at whether its worth changing this to vector of hashmaps
     std::unordered_set<std::string> constGlobals;
     using ParseFn = void (Compiler::*)(bool canAssign);
     struct ParseRule {
@@ -50,10 +47,11 @@ private:
         Precedence precedence;
     };
     int scope = 0;
+    // #TODO look at whether its worth changing this to vector of hashmaps
     std::vector<Local> locals = {};
     std::unordered_map<std::string, int> stringConstants;
     Chunk currentChunk { 100 };
-    const std::vector<Token>& tokens;
+    std::vector<Token> tokens;
     bool hadError = false;
     bool panicMode = false;
     size_t current;
@@ -65,10 +63,13 @@ private:
     void grouping(bool canAssign);
     void unary(bool canAssign);
     void binary(bool canAssign);
+    void and_(bool canAssign);
+    void or_(bool canAssign);
     void literal(bool canAssign);
     [[nodiscard]] bool check(Tokentype type) const;
     void printStatement();
     void expressionStatement();
+    void ifStatement();
     void statement();
     void defineVariable(uint8_t global);
     void declaration();
@@ -76,6 +77,8 @@ private:
     void namedVariable(Token& name, bool canAssign);
     void variableDeclaration();
     /* ---- Emit Functions ---- */
+    int emitJump(uint8_t instruction);
+    void patchJump(int offset);
     void emitByte(uint8_t byte);
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();

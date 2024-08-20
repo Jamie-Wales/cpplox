@@ -28,6 +28,13 @@ int Chunk::writeConstant(const Value& value, int line)
 
     return index;
 }
+int Chunk::disassembleJump(const std::string& name, int sign, int offset) const
+{
+    uint16_t jump = (code[offset + 1] << 8) | code[offset + 2];
+    std::cout << std::format("{:<16} {:4d} -> {}\n",
+        name, offset, offset + 3 + sign * jump);
+    return offset + 3;
+}
 
 void Chunk::writeChunk(const uint8_t byte, int line)
 {
@@ -79,10 +86,6 @@ int Chunk::disassembleInstruction(int offset) const
         return simpleInstruction("OP_GREATER_EQUAL", offset);
     case cast(OP_CODE::LESS_EQUAL):
         return simpleInstruction("OP_LESS_EQUAL", offset);
-    case cast(OP_CODE::AND):
-        return simpleInstruction("OP_AND", offset);
-    case cast(OP_CODE::OR):
-        return simpleInstruction("OP_OR", offset);
     case cast(OP_CODE::PRINT):
         return simpleInstruction("OP_PRINT", offset);
     case cast(OP_CODE::POP):
@@ -97,6 +100,12 @@ int Chunk::disassembleInstruction(int offset) const
         return constantInstruction("OP_SET_LOCAL", offset);
     case cast(OP_CODE::GET_LOCAL):
         return constantInstruction("OP_GET_LOCAL", offset);
+    case cast(OP_CODE::JUMP):
+        return disassembleJump("OP_JUMP", 1, offset);
+    case cast(OP_CODE::JUMP_IF_FALSE):
+        return disassembleJump("OP_JUMP_IF_FALSE", 1, offset);
+    case cast(OP_CODE::LOOP):
+        return disassembleJump("OP_LOOP", -1, offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;

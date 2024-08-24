@@ -1,6 +1,10 @@
-let a = 0;
 
-while (a < 10) {
-    print("Jamie is cool");
-    a = a + 1;
- }
+let a = 0;
+print(a++);
+print(a);
+
+{
+let b = 0;
+print(b++);
+print(b);
+}

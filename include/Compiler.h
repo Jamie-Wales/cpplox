@@ -22,7 +22,7 @@ enum class Precedence {
 };
 
 struct Local {
-    Token& token;
+    Token token;
     int scopeDepth;
     bool isConst;
 };
@@ -44,6 +44,7 @@ private:
     struct ParseRule {
         ParseFn prefix;
         ParseFn infix;
+        ParseFn postfix;
         Precedence precedence;
     };
     int scope = 0;
@@ -67,6 +68,9 @@ private:
     void and_(bool canAssign);
     void or_(bool canAssign);
     void literal(bool canAssign);
+
+    void prefix(bool canAssign);
+    void postfix(bool canAssign);
     [[nodiscard]] bool check(Tokentype type) const;
     void printStatement();
     void expressionStatement();
@@ -75,7 +79,7 @@ private:
     void defineVariable(uint8_t global);
     void declaration();
     void variable(bool canAssign);
-    void namedVariable(Token& name, bool canAssign);
+    void namedVariable(const Token &name, bool canAssign);
     void variableDeclaration();
     /* ---- Emit Functions ---- */
     int emitJump(uint8_t instruction);
@@ -84,7 +88,7 @@ private:
     void emitBytes(uint8_t byte1, uint8_t byte2);
     void emitReturn();
     uint8_t parseVariable(const std::string& errorMessage);
-    uint8_t identifierConstant(Token& token);
+    uint8_t identifierConstant(const Token& token);
     uint8_t emitConstant(const Value& value);
     void endCompiler();
     void whileStatement();
@@ -106,6 +110,6 @@ private:
     void declareVariable();
     void markInitialized();
     void block();
-    int resolveLocal(const Token& name);
-    void addLocal(Token& name);
+    int resolveLocal(const Token &name);
+    void addLocal(const Token &name);
 };

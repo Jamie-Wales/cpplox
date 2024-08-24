@@ -20,6 +20,7 @@ std::vector<Token> Scanner::tokenize()
         }
     }
     allTokens.emplace_back(Tokentype::EOF_TOKEN, "", line, row);
+
     return allTokens;
 }
 
@@ -28,12 +29,11 @@ std::optional<Token> Scanner::matchToken(std::string::const_iterator& it) const
     for (const auto& regex_info : regexList) {
         std::smatch match;
         if (std::regex_search(it, input.end(), match, regex_info.regex, std::regex_constants::match_continuous)) {
-            std::string lexeme = match.str();
+            const std::string lexeme = match.str();
             it += lexeme.length();
             Tokentype type = regex_info.type;
             if (type == Tokentype::IDENTIFIER) {
-                auto keywordIt = keywords.find(lexeme);
-                if (keywordIt != keywords.end()) {
+                if (const auto keywordIt = keywords.find(lexeme); keywordIt != keywords.end()) {
                     type = keywordIt->second;
                 }
             }
@@ -77,8 +77,6 @@ const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"(<)"), Tokentype::LESS },
     { std::regex(R"(>)"), Tokentype::GREATER },
     { std::regex(R"(=)"), Tokentype::EQUAL },
-    { std::regex(R"(\+)"), Tokentype::PLUS },
-    { std::regex(R"(-)"), Tokentype::MINUS },
     { std::regex(R"(\*)"), Tokentype::STAR },
     { std::regex(R"(/)"), Tokentype::SLASH },
     { std::regex(R"(!)"), Tokentype::BANG },
@@ -90,6 +88,10 @@ const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"(\n|\r\n|\r)"), Tokentype::CARRIGERETURN },
     { std::regex(R"([ \t]+)"), Tokentype::WHITESPACE },
     { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
+    { std::regex(R"(\+\+)"), Tokentype::INCREMENT },
+    { std::regex(R"(--)"), Tokentype::DECREMENT },
+    { std::regex(R"(\+)"), Tokentype::PLUS },
+    { std::regex(R"(-)"), Tokentype::MINUS },
 };
 
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
@@ -103,5 +105,5 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "const", Tokentype::CONST },
     { "if", Tokentype::IF },
     { "else", Tokentype::ELSE },
-    { "while", Tokentype::WHILE }
+    { "while", Tokentype::WHILE },
 };

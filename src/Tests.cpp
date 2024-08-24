@@ -4,7 +4,7 @@
 #include "vMachine.h"
 #include <iostream>
 
-void runTest(const std::string& testName, Chunk& chunk, double expectedResult)
+void runTest(const std::string& testName, const Chunk& chunk, const double expectedResult)
 {
     std::cout << "Running test: " << testName << std::endl;
     vMachine vm(chunk);

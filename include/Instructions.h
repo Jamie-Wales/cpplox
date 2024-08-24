@@ -10,6 +10,8 @@ enum class OP_CODE {
     DEFINE_GLOBAL,
     SET_GLOBAL,
     POP,
+    SWAP,
+    DUP,
     DIV,
     NEG,
     NIL,

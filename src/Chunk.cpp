@@ -7,13 +7,12 @@
 void Chunk::disassembleChunk(const std::string_view& name) const
 {
     std::cout << std::format("== {} ==\n", name);
-
     for (size_t offset = 0; offset < code.size();) {
         offset = disassembleInstruction(offset);
     }
 }
 
-int Chunk::writeConstant(const Value& value, int line)
+int Chunk::writeConstant(const Value& value, const int line)
 {
     const int index = addConstant(value);
     if (index < 256) {
@@ -30,7 +29,7 @@ int Chunk::writeConstant(const Value& value, int line)
 }
 int Chunk::disassembleJump(const std::string& name, int sign, int offset) const
 {
-    uint16_t jump = (code[offset + 1] << 8) | code[offset + 2];
+    const uint16_t jump = (code[offset + 1] << 8) | code[offset + 2];
     std::cout << std::format("{:<16} {:4d} -> {}\n",
         name, offset, offset + 3 + sign * jump);
     return offset + 3;
@@ -97,33 +96,43 @@ int Chunk::disassembleInstruction(int offset) const
     case cast(OP_CODE::GET_GLOBAL):
         return constantInstruction("OP_GET_GLOBAL", offset);
     case cast(OP_CODE::SET_LOCAL):
-        return constantInstruction("OP_SET_LOCAL", offset);
+        return byteInstruction("OP_SET_LOCAL", offset);
     case cast(OP_CODE::GET_LOCAL):
-        return constantInstruction("OP_GET_LOCAL", offset);
+        return byteInstruction("OP_GET_LOCAL", offset);
     case cast(OP_CODE::JUMP):
         return disassembleJump("OP_JUMP", 1, offset);
     case cast(OP_CODE::JUMP_IF_FALSE):
         return disassembleJump("OP_JUMP_IF_FALSE", 1, offset);
     case cast(OP_CODE::LOOP):
         return disassembleJump("OP_LOOP", -1, offset);
+    case cast(OP_CODE::SWAP):
+        return simpleInstruction("OP_SWAP", offset);
+    case cast(OP_CODE::DUP):
+        return simpleInstruction("OP_DUP", offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;
     }
 }
 
+int Chunk::byteInstruction(const std::string& name, const int offset) const {
+    uint8_t slot = code[offset + 1];
+    std::cout << std::format("{:<16} {:4d}\n", name, slot);
+    return offset + 2;
+}
+
 void Chunk::printLineNumber(const int offset) const
 {
-    for (const auto& lineInfo : lines) {
-        if (lineInfo.offset == offset) {
-            std::cout << std::format("{:4d} ", lineInfo.lineNumber);
+    for (const auto&[os, lineNumber] : lines) {
+        if (offset == os) {
+            std::cout << std::format("{:4d} ", lineNumber);
             return;
         }
     }
     std::cout << "   | ";
 }
 
-int Chunk::constantInstruction(const std::string& name, int offset) const
+int Chunk::constantInstruction(const std::string& name, const int offset) const
 {
     uint8_t constant = code[offset + 1];
     std::cout << std::format("{:<8} {:4d} '", name, constant);

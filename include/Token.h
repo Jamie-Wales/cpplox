@@ -49,7 +49,9 @@ enum class Tokentype {
     COMMENT,
     UNTERMINATED_STRING,
     UNTERMINATED_COMMENT,
-    UNKNOWN
+    UNKNOWN,
+    INCREMENT,
+    DECREMENT
 };
 
 struct Token {

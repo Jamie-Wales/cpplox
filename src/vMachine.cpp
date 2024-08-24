@@ -6,7 +6,7 @@
 #include <iostream>
 #include <ostream>
 #include <string>
-
+#define DEBUG_TRACE_EXECUTION
 template <typename... Args>
 void vMachine::runtimeError(const char* format, Args&&... args)
 {
@@ -85,7 +85,6 @@ void vMachine::run()
                 ip -= offset;
             } break;
             case cast(OP_CODE::RETURN): {
-
                 if (!stack.empty())
                     stack.pop_back();
                 state = vState::OK;
@@ -99,10 +98,10 @@ void vMachine::run()
                 stack.push_back(constant);
             } break;
             case cast(OP_CODE::TRUE):
-                stack.push_back({ true });
+                stack.emplace_back( true );
                 break;
             case cast(OP_CODE::FALSE):
-                stack.push_back({ false });
+                stack.emplace_back( false );
                 break;
             case cast(OP_CODE::ADD):
                 ensureStackSize(2, "ADD");
@@ -142,6 +141,7 @@ void vMachine::run()
                     }
                     globals[*internedString] = value;
                 }
+                stack.pop_back();
             } break;
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
@@ -151,7 +151,7 @@ void vMachine::run()
                 auto name = readConstant();
                 auto it = globals.find(name.to_string());
                 if (it == globals.end()) {
-                    runtimeError("Undefined variable '{}'.", name.to_string().c_str());
+                    runtimeError("Undefined variable {}.", name.to_string().c_str());
                 }
                 stack.push_back(it->second);
             } break;
@@ -198,6 +198,12 @@ void vMachine::run()
                 int offset = readShort();
                 ip += offset;
             } break;
+            case cast(OP_CODE::SWAP): {
+                swap();
+            } break;
+            case cast(OP_CODE::DUP): {
+                dup();
+            } break;
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
@@ -219,6 +225,15 @@ void vMachine::add()
     stack.back() += b;
 }
 
+void vMachine::swap()
+{
+    const auto top = stack.back();
+    stack.pop_back();
+    const auto next = stack.back();
+    stack.pop_back();
+    stack.push_back(top);
+    stack.push_back(next);
+}
 void vMachine::mult()
 {
     const auto& right = stack.back();
@@ -233,6 +248,10 @@ void vMachine::div()
     stack.back() /= right;
 }
 
+void vMachine::dup()
+{
+    stack.push_back(stack.back());
+}
 void vMachine::neg()
 {
     stack.back() = -stack.back();

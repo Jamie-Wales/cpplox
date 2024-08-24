@@ -7,7 +7,7 @@
 #include <iostream>
 #include <optional>
 
-std::string tokenTypeToString(Tokentype type)
+std::string tokenTypeToString(const Tokentype type)
 {
     switch (type) {
     case Tokentype::FLOAT:
@@ -119,12 +119,15 @@ std::optional<Chunk> Compiler::compile()
 void Compiler::beginScope()
 {
     scope++;
+    std::cout << "Begin scope: " << scope << std::endl;
 }
 
 void Compiler::endScope()
 {
+    std::cout << "End scope: " << scope << std::endl;
     scope--;
     while (!locals.empty() && locals.back().scopeDepth > scope) {
+        std::cout << "Popping local: " << locals.back().token.lexeme << std::endl;
         emitByte(cast(OP_CODE::POP));
         locals.pop_back();
     }
@@ -132,49 +135,46 @@ void Compiler::endScope()
 
 void Compiler::declareVariable()
 {
-    if (scope == 0)
-        return;
+    if (scope == 0) return;
 
-    Token& name = previous;
-    for (size_t i = locals.size() - 1; i > -1; i--) {
-        Local* local = &locals[i];
-        if (local->scopeDepth != -1 && local->scopeDepth < scope) {
+    const Token name = previous;
+    for (int i = locals.size() - 1; i > -1; i--) {
+        const auto&[token, scopeDepth, isConst] = locals[i];
+        if (scopeDepth != -1 && scopeDepth < scope) {
             break;
         }
-        if (local->token.lexeme == name.lexeme) {
+        if (token.lexeme == name.lexeme) {
             error("Already a variable with this name in this scope.");
         }
     }
     addLocal(name);
 }
 
-void Compiler::addLocal(Token& name)
-{
-    bool isConst = previous.type == Tokentype::CONST;
-    locals.emplace_back(Local { name, -1, isConst });
-}
 
 void Compiler::markInitialized()
 {
-    if (scope == 0)
-        return;
+    if (scope == 0) return;
     locals.back().scopeDepth = scope;
+}
+void Compiler::addLocal(const Token &name)
+{
+    const bool isConst = previous.type == Tokentype::CONST;
+    locals.push_back(Local { name, -1, isConst });
 }
 
 int Compiler::resolveLocal(const Token& name)
 {
-    for (int i = locals.size() - 1; i > -1; i--) {
-        Local local = locals[i];
-        if (name.lexeme == local.token.lexeme) {
-            if (local.scopeDepth == -1) {
-                error("Can't read local variable in its own initializer.");
-            }
+    for (int i = locals.size() - 1; i >= 0; i--) {
+        auto&[token, scopeDepth, isConst] = locals[i];
+        if (scopeDepth < scope) {
+            break;
+        }
+        if (name.lexeme == token.lexeme) {
             return i;
         }
     }
     return -1;
 }
-
 void Compiler::block()
 {
     while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
@@ -192,25 +192,27 @@ Value Compiler::makeString(const std::string& s)
 
 void Compiler::initRules()
 {
-    rules[Tokentype::AND] = { nullptr, &Compiler::and_, Precedence::AND };
-    rules[Tokentype::OR] = { nullptr, &Compiler::or_, Precedence::OR };
-    rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, Precedence::NONE };
-    rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, Precedence::TERM };
-    rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, Precedence::TERM };
-    rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, Precedence::FACTOR };
-    rules[Tokentype::STAR] = { nullptr, &Compiler::binary, Precedence::FACTOR };
-    rules[Tokentype::INTEGER] = { &Compiler::literal, nullptr, Precedence::NONE };
-    rules[Tokentype::STRING] = { &Compiler::literal, nullptr, Precedence::NONE };
-    rules[Tokentype::NIL] = { &Compiler::literal, nullptr, Precedence::NONE };
-    rules[Tokentype::TRUE] = { &Compiler::literal, nullptr, Precedence::NONE };
-    rules[Tokentype::FALSE] = { &Compiler::literal, nullptr, Precedence::NONE };
-    rules[Tokentype::BANG] = { &Compiler::unary, nullptr, Precedence::NONE };
-    rules[Tokentype::EQUAL_EQUAL] = { nullptr, &Compiler::binary, Precedence::EQUALITY };
-    rules[Tokentype::GREATER] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
-    rules[Tokentype::GREATER_EQUAL] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
-    rules[Tokentype::LESS] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
-    rules[Tokentype::LESS_EQUAL] = { nullptr, &Compiler::binary, Precedence::COMPARISON };
-    rules[Tokentype::IDENTIFIER] = { &Compiler::variable, nullptr, Precedence::NONE };
+    rules[Tokentype::AND] = { nullptr, &Compiler::and_, nullptr, Precedence::AND };
+    rules[Tokentype::OR] = { nullptr, &Compiler::or_, nullptr, Precedence::OR };
+    rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, nullptr, Precedence::TERM };
+    rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, nullptr, Precedence::TERM };
+    rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, nullptr, Precedence::FACTOR };
+    rules[Tokentype::STAR] = { nullptr, &Compiler::binary, nullptr, Precedence::FACTOR };
+    rules[Tokentype::INTEGER] = { &Compiler::literal, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::STRING] = { &Compiler::literal, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::NIL] = { &Compiler::literal, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::TRUE] = { &Compiler::literal, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::FALSE] = { &Compiler::literal, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::BANG] = { &Compiler::unary, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::EQUAL_EQUAL] = { nullptr, &Compiler::binary, nullptr, Precedence::EQUALITY };
+    rules[Tokentype::GREATER] = { nullptr, &Compiler::binary, nullptr, Precedence::COMPARISON };
+    rules[Tokentype::GREATER_EQUAL] = { nullptr, &Compiler::binary, nullptr, Precedence::COMPARISON };
+    rules[Tokentype::LESS] = { nullptr, &Compiler::binary, nullptr, Precedence::COMPARISON };
+    rules[Tokentype::LESS_EQUAL] = { nullptr, &Compiler::binary, nullptr, Precedence::COMPARISON };
+    rules[Tokentype::IDENTIFIER] = { &Compiler::variable, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::INCREMENT] = { &Compiler::prefix, nullptr, &Compiler::postfix, Precedence::CALL };
+    rules[Tokentype::DECREMENT] = { &Compiler::prefix, nullptr, &Compiler::postfix, Precedence::CALL };
 }
 
 void Compiler::advance()
@@ -227,10 +229,10 @@ bool Compiler::consume(const Tokentype type, const std::string& message)
     if (tokens[current].type == type) {
         advance();
         return true;
-    } else {
-        errorAtCurrent(message);
-        return false;
     }
+    errorAtCurrent(message);
+    return false;
+
 }
 
 void Compiler::errorAtCurrent(const std::string& message)
@@ -270,27 +272,40 @@ void Compiler::expression()
 
 void Compiler::parsePrecedence(const Precedence precedence)
 {
-    const bool canAssign = precedence <= Precedence::ASSIGNMENT;
-    const ParseFn prefixRule = getRule(tokens[current].type).prefix;
+    advance();
+    const ParseFn prefixRule = getRule(previous.type).prefix;
     if (prefixRule == nullptr) {
         error("Expect expression.");
         return;
     }
-
-    advance();
+    const bool canAssign = precedence <= Precedence::ASSIGNMENT;
     (this->*prefixRule)(canAssign);
-
     while (precedence <= getRule(tokens[current].type).precedence) {
         advance();
-        const ParseFn infixRule = getRule(previous.type).infix;
-        (this->*infixRule)(canAssign);
+        if (const ParseFn infixRule = getRule(previous.type).infix; infixRule != nullptr) {
+            (this->*infixRule)(canAssign);
+        }
+    }
+    if (const ParseFn postfixRule = getRule(previous.type).postfix; postfixRule != nullptr) {
+        (this->*postfixRule)(false);
+    }
+    if (canAssign && match(Tokentype::EQUAL)) {
+        error("Invalid assignment target.");
     }
 }
 
+void Compiler::printStatement()
+{
+    consume(Tokentype::LEFTPEREN, "Expect '(' after 'print'.");
+    expression();
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after expression in print statement.");
+    consume(Tokentype::SEMICOLON, "Expect ';' after print statement.");
+    emitByte(cast(OP_CODE::PRINT));
+}
 Compiler::ParseRule Compiler::getRule(const Tokentype type)
 {
     const auto it = rules.find(type);
-    return it != rules.end() ? it->second : ParseRule { nullptr, nullptr, Precedence::NONE };
+    return it != rules.end() ? it->second : ParseRule { nullptr, nullptr, nullptr, Precedence::NONE };
 }
 
 void Compiler::grouping(bool canAssign)
@@ -313,12 +328,52 @@ void Compiler::unary(bool canAssign)
         return;
     }
 }
+void Compiler::prefix(bool canAssign)
+{
+    const Tokentype operatorType = previous.type;
+    parsePrecedence(Precedence::UNARY);
+    emitConstant(operatorType == Tokentype::INCREMENT ? Value(1.0) : Value(-1.0));
+    emitByte(cast(OP_CODE::ADD));
+}
+
+void Compiler::postfix(bool canAssign)
+{
+    const Token name = tokens[current - 2];
+    int arg = resolveLocal(name);
+    uint8_t setOp;
+    if (arg != -1) {
+        setOp = cast(OP_CODE::SET_LOCAL);
+    } else {
+        arg = identifierConstant(name);
+        setOp = cast(OP_CODE::SET_GLOBAL);
+    }
+
+    emitByte(cast(OP_CODE::DUP));
+
+    switch (previous.type) {
+        case Tokentype::INCREMENT:
+            emitConstant(Value(1.0));
+        emitByte(cast(OP_CODE::ADD));
+        break;
+        case Tokentype::DECREMENT:
+            emitConstant(Value(-1.0));
+        emitByte(cast(OP_CODE::ADD));
+        break;
+        default:
+            error("Unexpected postfix operator.");
+        return;
+    }
+    emitBytes(setOp, static_cast<uint8_t>(arg));
+    emitByte(cast(OP_CODE::POP));
+}
+
+
 
 void Compiler::binary(bool canAssign)
 {
     const Tokentype operatorType = previous.type;
-    const ParseRule& rule = getRule(operatorType);
-    parsePrecedence(static_cast<Precedence>(static_cast<int>(rule.precedence) + 1));
+    const auto&[prefix, infix, postfix, precedence] = getRule(operatorType);
+    parsePrecedence(static_cast<Precedence>(static_cast<int>(precedence) + 1));
     switch (operatorType) {
     case Tokentype::PLUS:
         emitByte(cast(OP_CODE::ADD));
@@ -366,11 +421,11 @@ void Compiler::literal(bool canAssign)
         emitByte(cast(OP_CODE::FALSE));
         break;
     case Tokentype::INTEGER: {
-        double value = std::stod(previous.lexeme);
+        const double value = std::stod(previous.lexeme);
         emitConstant(Value(value));
     } break;
     case Tokentype::STRING: {
-        std::string value = previous.lexeme.substr(1, previous.lexeme.length() - 2);
+        const std::string value = previous.lexeme.substr(1, previous.lexeme.length() - 2);
         emitConstant(makeString(value));
     } break;
     case Tokentype::NIL:
@@ -396,7 +451,7 @@ bool Compiler::check(const Tokentype type) const
     return tokens[current].type == type;
 }
 
-int Compiler::emitJump(uint8_t instruction)
+int Compiler::emitJump(const uint8_t instruction)
 {
     emitByte(instruction);
     emitByte(0xff);
@@ -404,9 +459,9 @@ int Compiler::emitJump(uint8_t instruction)
     return currentChunk.code.size() - 2;
 }
 
-void Compiler::patchJump(int offset)
+void Compiler::patchJump(const int offset)
 {
-    int jump = currentChunk.code.size() - offset - 2;
+    const int jump = currentChunk.code.size() - offset - 2;
 
     if (jump > UINT16_MAX) {
         error("Too much code to jump over.");
@@ -421,11 +476,11 @@ void Compiler::ifStatement()
     expression();
     consume(Tokentype::RIGHTPEREN, "Expect ')' after condition.");
 
-    int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
-    emitByte(cast(OP_CODE::POP)); // Pop the condition if it's true
+    const int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    emitByte(cast(OP_CODE::POP));
     statement();
 
-    int elseJump = emitJump(cast(OP_CODE::JUMP));
+    const int elseJump = emitJump(cast(OP_CODE::JUMP));
 
     patchJump(thenJump);
     emitByte(cast(OP_CODE::POP));
@@ -435,14 +490,6 @@ void Compiler::ifStatement()
     }
 
     patchJump(elseJump);
-}
-void Compiler::printStatement()
-{
-    consume(Tokentype::LEFTPEREN, "Expect '(' after 'print'.");
-    expression();
-    consume(Tokentype::RIGHTPEREN, "Expect ')' after expression in print statement.");
-    consume(Tokentype::SEMICOLON, "Expect ';' after print statement.");
-    emitByte(cast(OP_CODE::PRINT));
 }
 
 void Compiler::expressionStatement()
@@ -455,11 +502,11 @@ void Compiler::expressionStatement()
     }
     emitByte(cast(OP_CODE::POP));
 }
-void Compiler::emitLoop(int loopStart)
+void Compiler::emitLoop(const int loopStart)
 {
     emitByte(cast(OP_CODE::LOOP));
 
-    int offset = currentChunk.code.size() - loopStart + 2;
+    const int offset = currentChunk.code.size() - loopStart + 2;
     if (offset > UINT16_MAX)
         error("Loop body too large.");
 
@@ -469,13 +516,12 @@ void Compiler::emitLoop(int loopStart)
 
 void Compiler::whileStatement()
 {
-
-    int loopStart = currentChunk.code.size();
+    const int loopStart = currentChunk.code.size();
     consume(Tokentype::LEFTPEREN, "Expect '(' after 'while'.");
     expression();
     consume(Tokentype::RIGHTPEREN, "Expect ')' after condition.");
 
-    int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    const int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
     statement();
     emitLoop(loopStart);
@@ -501,11 +547,11 @@ void Compiler::statement()
     }
 }
 
-uint8_t Compiler::identifierConstant(Token& token)
+uint8_t Compiler::identifierConstant(const Token& token)
 {
-    auto constant = makeString(token.lexeme);
+    const auto constant = makeString(token.lexeme);
     Value indexValue;
-    auto it = stringConstants.find(constant.to_string());
+    const auto it = stringConstants.find(constant.to_string());
     if (it == stringConstants.end()) {
         stringConstants[token.lexeme] = emitConstant(constant);
         return stringConstants[token.lexeme];
@@ -524,7 +570,7 @@ uint8_t Compiler::parseVariable(const std::string& errorMessage)
     return identifierConstant(previous);
 }
 
-void Compiler::defineVariable(uint8_t global)
+void Compiler::defineVariable(const uint8_t global)
 {
     if (scope > 0) {
         markInitialized();
@@ -547,8 +593,8 @@ void Compiler::emitBytes(const uint8_t byte1, const uint8_t byte2)
 void Compiler::variableDeclaration()
 {
     bool isConst = previous.type == Tokentype::CONST;
-    const uint8_t global = parseVariable("Expect variable name.");
-    Token name = previous;
+    uint8_t global = parseVariable("Expect variable name.");
+
     if (match(Tokentype::EQUAL)) {
         expression();
     } else {
@@ -563,14 +609,15 @@ void Compiler::variableDeclaration()
 
     if (scope > 0) {
         markInitialized();
-        locals.back().isConst = isConst;
+        emitBytes(cast(OP_CODE::SET_LOCAL), static_cast<uint8_t>(locals.size() - 1));
     } else {
         if (isConst) {
-            constGlobals.insert(name.lexeme); // Use the stored variable name
+            constGlobals.insert(previous.lexeme);
         }
         defineVariable(global);
     }
 }
+
 void Compiler::variable(const bool canAssign)
 {
     namedVariable(previous, canAssign);
@@ -596,7 +643,7 @@ bool Compiler::match(const Tokentype& type)
 }
 void Compiler::and_(bool canAssign)
 {
-    int endJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    const int endJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
     parsePrecedence(Precedence::AND);
     patchJump(endJump);
@@ -604,23 +651,19 @@ void Compiler::and_(bool canAssign)
 
 void Compiler::or_(bool canAssign)
 {
-    int elseJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
-    int endJump = emitJump(cast(OP_CODE::JUMP));
-
+    const int elseJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    const int endJump = emitJump(cast(OP_CODE::JUMP));
     patchJump(elseJump);
     emitByte(cast(OP_CODE::POP));
-
     parsePrecedence(Precedence::OR);
     patchJump(endJump);
 }
 void Compiler::synchronize()
 {
     panicMode = false;
-
     while (current < tokens.size() && tokens[current].type != Tokentype::EOF_TOKEN) {
         if (previous.type == Tokentype::SEMICOLON)
             return;
-
         switch (tokens[current].type) {
         case Tokentype::CLASS:
         case Tokentype::FUN:
@@ -635,41 +678,26 @@ void Compiler::synchronize()
         default:
             break;
         }
-
         advance();
     }
 }
-void Compiler::namedVariable(Token& name, bool canAssign)
+
+void Compiler::namedVariable(const Token &name, const bool canAssign)
 {
     uint8_t getOp, setOp;
     int arg = resolveLocal(name);
-
     if (arg != -1) {
         getOp = cast(OP_CODE::GET_LOCAL);
         setOp = cast(OP_CODE::SET_LOCAL);
-        if (canAssign && check(Tokentype::EQUAL)) {
-            if (locals[arg].isConst) {
-                error("Cannot reassign to const local variable.");
-            }
-            advance();
-            expression();
-            emitBytes(setOp, static_cast<uint8_t>(arg));
-        } else {
-            emitBytes(getOp, static_cast<uint8_t>(arg));
-        }
     } else {
         arg = identifierConstant(name);
         getOp = cast(OP_CODE::GET_GLOBAL);
         setOp = cast(OP_CODE::SET_GLOBAL);
-        if (canAssign && check(Tokentype::EQUAL)) {
-            if (constGlobals.find(name.lexeme) != constGlobals.end()) {
-                error("Cannot reassign to const global variable.");
-            }
-            advance();
-            expression();
-            emitBytes(setOp, static_cast<uint8_t>(arg));
-        } else {
-            emitBytes(getOp, static_cast<uint8_t>(arg));
-        }
+    }
+    if (canAssign && match(Tokentype::EQUAL)) {
+        expression();
+        emitBytes(setOp, static_cast<uint8_t>(arg));
+    } else {
+        emitBytes(getOp, static_cast<uint8_t>(arg));
     }
 }

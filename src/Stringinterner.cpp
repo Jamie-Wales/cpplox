@@ -3,7 +3,7 @@
 
 const std::string* StringInterner::find(const std::string& s) const
 {
-    auto it = pool.find(s);
+    const auto it = pool.find(s);
     return it != pool.end() ? &(*it) : nullptr;
 }
 

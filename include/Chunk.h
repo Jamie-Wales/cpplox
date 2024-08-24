@@ -32,6 +32,11 @@ public:
     void writeChunk(uint8_t byte, int line);
     void disassembleChunk(const std::string_view& name);
     [[nodiscard]] int disassembleInstruction(int offset) const;
+
+    int byteInstruction(const std::string &name, int offset) const;
+
+    int byteInstruction(int offset);
+
     [[nodiscard]] int constantInstruction(const std::string& name, int offset) const;
     [[nodiscard]] int constantLongInstruction(const std::string& name, int offset) const;
     [[nodiscard]] int disassembleJump(const std::string& name, int sign, int offset) const;

@@ -44,6 +44,8 @@ private:
 
     int readShort();
     std::vector<Value> stack;
+    void swap();
+    void dup();
     void add();
     void mult();
     void div();

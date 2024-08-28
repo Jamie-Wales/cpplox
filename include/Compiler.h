@@ -1,12 +1,12 @@
 #pragma once
 #include "Chunk.h"
+#include "Object.h"
 #include "Token.h"
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
 enum class Precedence {
     NONE,
     ASSIGNMENT,
@@ -20,13 +20,14 @@ enum class Precedence {
     CALL,
     PRIMARY
 };
-
+enum class FunctionType {
+    FUNCTION
+};
 struct Local {
     Token token;
     int scopeDepth;
     bool isConst;
 };
-
 class Compiler {
 public:
     explicit Compiler(const std::vector<Token>& tokens)
@@ -34,10 +35,25 @@ public:
         , current(0)
     {
         initRules();
+        functions.push_back(new ObjFunction("<script>", 0, Chunk {}));
+        currentChunk = functions[0]->chunk;
+        locals = {};
+        locals.push_back({});
     }
     std::optional<Chunk> compile();
 
 private:
+    struct LoopInfo {
+        int start;
+        int scopeDepth;
+        std::vector<int> breaks;
+        int continueTarget;
+    };
+    std::vector<LoopInfo> loopStack;
+    std::vector<ObjFunction*> functions;
+    void breakStatement();
+    void continueStatement();
+    void switchStatement();
     // #TODO look at whether its worth changing this to vector of hashmaps
     std::unordered_set<std::string> constGlobals;
     using ParseFn = void (Compiler::*)(bool canAssign);
@@ -58,7 +74,8 @@ private:
     size_t current;
     Token previous;
     std::unordered_map<Tokentype, ParseRule> rules;
-
+    size_t functionP;
+    ObjFunction* currentFunction();
     /* ---- Parsing ---- */
     void emitLoop(int loopStart);
     void expression();
@@ -68,7 +85,6 @@ private:
     void and_(bool canAssign);
     void or_(bool canAssign);
     void literal(bool canAssign);
-
     void prefix(bool canAssign);
     void postfix(bool canAssign);
     [[nodiscard]] bool check(Tokentype type) const;
@@ -79,9 +95,8 @@ private:
     void defineVariable(uint8_t global);
     void declaration();
     void variable(bool canAssign);
-    void namedVariable(const Token &name, bool canAssign);
+    void namedVariable(const Token& name, bool canAssign);
     void variableDeclaration();
-    /* ---- Emit Functions ---- */
     int emitJump(uint8_t instruction);
     void patchJump(int offset);
     void emitByte(uint8_t byte);
@@ -90,17 +105,15 @@ private:
     uint8_t parseVariable(const std::string& errorMessage);
     uint8_t identifierConstant(const Token& token);
     uint8_t emitConstant(const Value& value);
-    void endCompiler();
+    ObjFunction* endCompiler();
     void whileStatement();
     static Value makeString(const std::string& s);
-    /* ---- Helper Functions ---- */
     void parsePrecedence(Precedence precedence);
     bool match(const Tokentype& type);
     void initRules();
     void advance();
     ParseRule getRule(Tokentype type);
     bool consume(Tokentype type, const std::string& message);
-    /* ---- Error Functions ---- */
     void synchronize();
     void errorAtCurrent(const std::string& message);
     void error(const std::string& message);
@@ -110,6 +123,15 @@ private:
     void declareVariable();
     void markInitialized();
     void block();
-    int resolveLocal(const Token &name);
-    void addLocal(const Token &name);
+    int resolveLocal(const Token& name);
+    void addLocal(const Token& name);
+    void forStatement();
+    void funDeclaration();
+    void function(FunctionType ft);
+    uint8_t argumentList();
+    void call(bool canAssign);
+    void returnStatement();
+    Value makeFunction(ObjFunction* function);
+
+    void compileInto(Chunk &chunk);
 };

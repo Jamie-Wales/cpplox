@@ -1,10 +1,10 @@
+ let a = "jaimsd";
 
-let a = 0;
-print(a++);
-print(a);
+a = "jaiodj!";
 
-{
-let b = 0;
-print(b++);
-print(b);
+
+fn addyo(str) {
+    print(str);
 }
+
+addyo(a);

@@ -1,8 +1,9 @@
 #pragma once
-#include "Object.h"
 #include <cstddef>
 #include <string>
 #include <variant>
+
+class Obj;
 
 struct Value {
     std::variant<double, bool, nullptr_t, Obj*> as;

@@ -29,7 +29,8 @@ enum class OP_CODE {
     SET_LOCAL,
     JUMP_IF_FALSE,
     JUMP,
-    LOOP
+    LOOP,
+    CALL
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

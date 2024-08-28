@@ -20,7 +20,6 @@ std::vector<Token> Scanner::tokenize()
         }
     }
     allTokens.emplace_back(Tokentype::EOF_TOKEN, "", line, row);
-
     return allTokens;
 }
 
@@ -90,8 +89,11 @@ const std::vector<Scanner::RegexInfo> Scanner::regexList = {
     { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
     { std::regex(R"(\+\+)"), Tokentype::INCREMENT },
     { std::regex(R"(--)"), Tokentype::DECREMENT },
+    { std::regex(R"(->)"), Tokentype::ARROW },
     { std::regex(R"(\+)"), Tokentype::PLUS },
     { std::regex(R"(-)"), Tokentype::MINUS },
+    { std::regex("_"), Tokentype::UNDERSCORE },
+    { std::regex(","), Tokentype::COMMA },
 };
 
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
@@ -106,4 +108,10 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "if", Tokentype::IF },
     { "else", Tokentype::ELSE },
     { "while", Tokentype::WHILE },
+    { "for", Tokentype::FOR },
+    { "continue", Tokentype::CONTINUE },
+    { "break", Tokentype::BREAK },
+    { "switch", Tokentype::SWITCH },
+    { "return", Tokentype::RETURN },
+    { "fn", Tokentype::FUN}
 };

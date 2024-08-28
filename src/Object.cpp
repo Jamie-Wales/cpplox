@@ -1,4 +1,6 @@
 #include "Object.h"
+#include "Visit.h"
+#include <format>
 #include <iostream>
 
 void Obj::print() const
@@ -12,11 +14,14 @@ std::string Obj::to_string() const
                           [](const ObjString& s) -> std::string {
                               return *s.str;
                           },
-                          [](const ObjFunction&) -> std::string {
-                              return { "<function>" };
+                          [](const ObjFunction& f) -> std::string {
+                              return std::format("<function {}>", f.name);
                           },
                           [](const ObjInstance&) -> std::string {
-                              return { "<instance>" };
+                              return "<instance>";
+                          },
+                          [](const ObjNative&) -> std::string {
+                              return "<native fn>";
                           } },
         as);
 }

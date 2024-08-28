@@ -1,24 +1,45 @@
 #pragma once
 #include "Chunk.h"
+#include "Object.h"
 #include <unordered_map>
 #include <utility>
 
 enum class vState { OK,
     BAD };
 
+struct CallFrame {
+    ObjFunction* function;
+    size_t ip;
+    size_t stackOffset;
+};
+
 class vMachine {
 public:
+    std::vector<CallFrame> frames;
+    CallFrame* frame;
+
+    void call(ObjFunction* function, int argCount);
+    bool callValue(Value callee, int argCount);
     explicit vMachine(Chunk chunk)
-        : instructions(std::move(chunk))
+            : globals{}
+            , instructions(std::move(chunk))
+            , ip(0)
+            , stack{}
     {
-        globals = {};
+        auto* mainFunction = new ObjFunction("main", 0, instructions);
+        frames.push_back({mainFunction, 0, 0});
+        frame = &frames.back();
     }
+
     vMachine()
-        : globals {}
-        , instructions {}
-        , ip(0)
-        , stack {}
+            : globals{}
+            , instructions{}
+            , ip(0)
+            , stack{}
     {
+        auto* mainFunction = new ObjFunction("main", 0, Chunk{});
+        frames.push_back({mainFunction, 0, 0});
+        frame = &frames.back();
     }
     vMachine(vMachine&&) = default;
     vMachine(const vMachine&) = default;
@@ -37,11 +58,15 @@ public:
     void run();
     void execute(const Chunk& newInstructions);
 
+    void defineNative(const std::string& name, NativeFn function);
+
 private:
-    vState state = vState::OK;
+    vState state
+        = vState::OK;
     Chunk instructions;
     int ip = 0;
-
+    static constexpr size_t FRAMES_MAX = 64;
+    static constexpr size_t STACK_MAX = FRAMES_MAX * 256;
     int readShort();
     std::vector<Value> stack;
     void swap();
@@ -59,5 +84,6 @@ private:
     void less();
     void greaterEqual();
     void lessEqual();
+    uint8_t readByte();
     void ensureStackSize(size_t size, const char* opcode) const;
 };

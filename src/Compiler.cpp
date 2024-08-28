@@ -1,12 +1,14 @@
 #include "Compiler.h"
+#include "Chunk.h"
 #include "Instructions.h"
+#include "Object.h"
 #include "Stringinterner.h"
 #include "Token.h"
 #include "Value.h"
 #include <cstdint>
 #include <iostream>
 #include <optional>
-
+#define DEBUG_PRINT_CODE
 std::string tokenTypeToString(const Tokentype type)
 {
     switch (type) {
@@ -102,7 +104,7 @@ std::string tokenTypeToString(const Tokentype type)
         return "UNDEFINED_TOKEN_TYPE";
     }
 }
-
+/* # TODO fix const */
 std::optional<Chunk> Compiler::compile()
 {
     hadError = false;
@@ -119,12 +121,10 @@ std::optional<Chunk> Compiler::compile()
 void Compiler::beginScope()
 {
     scope++;
-    std::cout << "Begin scope: " << scope << std::endl;
 }
 
 void Compiler::endScope()
 {
-    std::cout << "End scope: " << scope << std::endl;
     scope--;
     while (!locals.empty() && locals.back().scopeDepth > scope) {
         std::cout << "Popping local: " << locals.back().token.lexeme << std::endl;
@@ -135,11 +135,12 @@ void Compiler::endScope()
 
 void Compiler::declareVariable()
 {
-    if (scope == 0) return;
+    if (scope == 0)
+        return;
 
     const Token name = previous;
     for (int i = locals.size() - 1; i > -1; i--) {
-        const auto&[token, scopeDepth, isConst] = locals[i];
+        const auto& [token, scopeDepth, isConst] = locals[i];
         if (scopeDepth != -1 && scopeDepth < scope) {
             break;
         }
@@ -150,13 +151,13 @@ void Compiler::declareVariable()
     addLocal(name);
 }
 
-
 void Compiler::markInitialized()
 {
-    if (scope == 0) return;
+    if (scope == 0)
+        return;
     locals.back().scopeDepth = scope;
 }
-void Compiler::addLocal(const Token &name)
+void Compiler::addLocal(const Token& name)
 {
     const bool isConst = previous.type == Tokentype::CONST;
     locals.push_back(Local { name, -1, isConst });
@@ -165,11 +166,11 @@ void Compiler::addLocal(const Token &name)
 int Compiler::resolveLocal(const Token& name)
 {
     for (int i = locals.size() - 1; i >= 0; i--) {
-        auto&[token, scopeDepth, isConst] = locals[i];
-        if (scopeDepth < scope) {
-            break;
-        }
+        auto& [token, scopeDepth, isConst] = locals[i];
         if (name.lexeme == token.lexeme) {
+            if (scopeDepth == -1) {
+                error("Can't read local variable in its own initializer.");
+            }
             return i;
         }
     }
@@ -194,7 +195,7 @@ void Compiler::initRules()
 {
     rules[Tokentype::AND] = { nullptr, &Compiler::and_, nullptr, Precedence::AND };
     rules[Tokentype::OR] = { nullptr, &Compiler::or_, nullptr, Precedence::OR };
-    rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, nullptr, nullptr, Precedence::NONE };
+    rules[Tokentype::LEFTPEREN] = { &Compiler::grouping, &Compiler::call, nullptr, Precedence::CALL };
     rules[Tokentype::MINUS] = { &Compiler::unary, &Compiler::binary, nullptr, Precedence::TERM };
     rules[Tokentype::PLUS] = { nullptr, &Compiler::binary, nullptr, Precedence::TERM };
     rules[Tokentype::SLASH] = { nullptr, &Compiler::binary, nullptr, Precedence::FACTOR };
@@ -232,7 +233,55 @@ bool Compiler::consume(const Tokentype type, const std::string& message)
     }
     errorAtCurrent(message);
     return false;
+}
 
+void Compiler::funDeclaration()
+{
+    uint8_t global = parseVariable("Expect function name.");
+    markInitialized();
+    function(FunctionType::FUNCTION);
+    defineVariable(global);
+}
+
+void Compiler::function(FunctionType type)
+{
+    ObjFunction* function = new ObjFunction(previous.lexeme, 0, Chunk {});
+    beginScope();
+    consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
+    if (!check(Tokentype::RIGHTPEREN)) {
+        do {
+            function->arity++;
+            uint8_t paramConstant = parseVariable("Expect parameter name.");
+            defineVariable(paramConstant);
+        } while (match(Tokentype::COMMA));
+    }
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after parameters.");
+    consume(Tokentype::LEFTBRACE, "Expect '{' before function body.");
+
+    compileInto(function->chunk);
+    emitConstant(makeFunction(function));
+    endScope();
+}
+
+void Compiler::compileInto(Chunk& chunk)
+{
+    while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
+        declaration();
+    }
+    consume(Tokentype::RIGHTBRACE, "Expect '}' after block.");
+    if (chunk.code.empty() || chunk.code.back() != cast(OP_CODE::RETURN)) {
+        emitByte(cast(OP_CODE::NIL));
+        emitByte(cast(OP_CODE::RETURN));
+    }
+}
+
+Value Compiler::makeFunction(ObjFunction* function)
+{
+    return Value(new Obj(ObjFunction(*function)));
+}
+ObjFunction* Compiler::currentFunction()
+{
+    return functions.back();
 }
 
 void Compiler::errorAtCurrent(const std::string& message)
@@ -260,9 +309,13 @@ void Compiler::errorAt(const Token& token, const std::string& message)
     hadError = true;
 }
 
-void Compiler::endCompiler()
+ObjFunction* Compiler::endCompiler()
 {
+#ifdef DEBUG_PRINT_CODE
+    currentChunk.disassembleChunk(currentFunction()->name);
+#endif
     emitReturn();
+    return functions[functions.size()];
 }
 
 void Compiler::expression()
@@ -328,6 +381,59 @@ void Compiler::unary(bool canAssign)
         return;
     }
 }
+void Compiler::switchStatement()
+{
+    expression();
+    consume(Tokentype::LEFTBRACE, "Expect '{' after switch condition.");
+    std::vector<int> endJumps;
+    std::vector<int> nextCaseJumps;
+    bool hasDefault = false;
+    int defaultJump = -1;
+    while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
+        if (match(Tokentype::IDENTIFIER) && previous.lexeme == "_") {
+            if (hasDefault) {
+                error("Cannot have multiple default cases in switch statement.");
+            }
+            hasDefault = true;
+            consume(Tokentype::ARROW, "Expect '->' after default case.");
+            defaultJump = current;
+            for (int jump : nextCaseJumps) {
+                patchJump(jump);
+            }
+            nextCaseJumps.clear();
+            statement();
+            endJumps.push_back(emitJump(cast(OP_CODE::JUMP)));
+        } else {
+            for (int jump : nextCaseJumps) {
+                patchJump(jump);
+            }
+            nextCaseJumps.clear();
+            emitByte(cast(OP_CODE::DUP));
+            expression();
+            consume(Tokentype::ARROW, "Expect '->' after case value.");
+            emitByte(cast(OP_CODE::EQUAL));
+            int jumpToNextCase = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+            nextCaseJumps.push_back(jumpToNextCase);
+            emitByte(cast(OP_CODE::POP));
+            emitByte(cast(OP_CODE::POP));
+            statement();
+            endJumps.push_back(emitJump(cast(OP_CODE::JUMP)));
+        }
+    }
+    for (int jump : nextCaseJumps) {
+        patchJump(jump);
+    }
+    if (hasDefault) {
+        patchJump(defaultJump);
+    } else {
+        emitByte(cast(OP_CODE::POP));
+    }
+    for (int jump : endJumps) {
+        patchJump(jump);
+    }
+    consume(Tokentype::RIGHTBRACE, "Expect '}' at end of switch statement.");
+}
+
 void Compiler::prefix(bool canAssign)
 {
     const Tokentype operatorType = previous.type;
@@ -349,30 +455,27 @@ void Compiler::postfix(bool canAssign)
     }
 
     emitByte(cast(OP_CODE::DUP));
-
     switch (previous.type) {
-        case Tokentype::INCREMENT:
-            emitConstant(Value(1.0));
+    case Tokentype::INCREMENT:
+        emitConstant(Value(1.0));
         emitByte(cast(OP_CODE::ADD));
         break;
-        case Tokentype::DECREMENT:
-            emitConstant(Value(-1.0));
+    case Tokentype::DECREMENT:
+        emitConstant(Value(-1.0));
         emitByte(cast(OP_CODE::ADD));
         break;
-        default:
-            error("Unexpected postfix operator.");
+    default:
+        error("Unexpected postfix operator.");
         return;
     }
     emitBytes(setOp, static_cast<uint8_t>(arg));
     emitByte(cast(OP_CODE::POP));
 }
 
-
-
 void Compiler::binary(bool canAssign)
 {
     const Tokentype operatorType = previous.type;
-    const auto&[prefix, infix, postfix, precedence] = getRule(operatorType);
+    const auto& [prefix, infix, postfix, precedence] = getRule(operatorType);
     parsePrecedence(static_cast<Precedence>(static_cast<int>(precedence) + 1));
     switch (operatorType) {
     case Tokentype::PLUS:
@@ -495,13 +598,11 @@ void Compiler::ifStatement()
 void Compiler::expressionStatement()
 {
     expression();
-    if (!panicMode) {
-        consume(Tokentype::SEMICOLON, "Expect ';' after expression.");
-    } else {
+    if (panicMode) {
         synchronize();
     }
-    emitByte(cast(OP_CODE::POP));
 }
+
 void Compiler::emitLoop(const int loopStart)
 {
     emitByte(cast(OP_CODE::LOOP));
@@ -516,24 +617,125 @@ void Compiler::emitLoop(const int loopStart)
 
 void Compiler::whileStatement()
 {
-    const int loopStart = currentChunk.code.size();
+    LoopInfo loop;
+    loop.start = currentChunk.code.size();
+    loop.scopeDepth = scope;
+    loop.continueTarget = loop.start;
+    loopStack.push_back(loop);
+
     consume(Tokentype::LEFTPEREN, "Expect '(' after 'while'.");
     expression();
     consume(Tokentype::RIGHTPEREN, "Expect ')' after condition.");
 
-    const int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
     statement();
-    emitLoop(loopStart);
+    emitLoop(loop.start);
 
     patchJump(exitJump);
     emitByte(cast(OP_CODE::POP));
+    for (int offset : loopStack.back().breaks) {
+        patchJump(offset);
+    }
+
+    loopStack.pop_back();
+}
+void Compiler::forStatement()
+{
+    beginScope();
+    consume(Tokentype::LEFTPEREN, "Expect '(' after 'for'.");
+    if (match(Tokentype::SEMICOLON)) {
+    } else if (match(Tokentype::LET)) {
+        variableDeclaration();
+    } else {
+        expressionStatement();
+    }
+    LoopInfo loop;
+    loop.start = currentChunk.code.size();
+    loop.scopeDepth = scope;
+    int exitJump = -1;
+    if (!match(Tokentype::SEMICOLON)) {
+        expression();
+        consume(Tokentype::SEMICOLON, "Expect ';' after loop condition.");
+        exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+        emitByte(cast(OP_CODE::POP));
+    }
+    if (!match(Tokentype::RIGHTPEREN)) {
+        int bodyJump = emitJump(cast(OP_CODE::JUMP));
+        int incrementStart = currentChunk.code.size();
+        expression();
+        emitByte(cast(OP_CODE::POP));
+        consume(Tokentype::RIGHTPEREN, "Expect ')' after for clauses.");
+
+        emitLoop(loop.start);
+        loop.start = incrementStart;
+        patchJump(bodyJump);
+    }
+    loop.continueTarget = loop.start;
+    loopStack.push_back(loop);
+    statement();
+    emitLoop(loop.start);
+    if (exitJump != -1) {
+        patchJump(exitJump);
+        emitByte(cast(OP_CODE::POP));
+    }
+    for (int offset : loopStack.back().breaks) {
+        patchJump(offset);
+    }
+    loopStack.pop_back();
+    endScope();
+}
+void Compiler::call(bool canAssign)
+{
+    uint8_t argCount = argumentList();
+    emitBytes(cast(OP_CODE::CALL), argCount);
+    consume(Tokentype::SEMICOLON, "End call with ;");
+}
+
+uint8_t Compiler::argumentList()
+{
+    uint8_t argCount = 0;
+    if (!check(Tokentype::RIGHTPEREN)) {
+        do {
+            expression();
+            if (argCount == 255) {
+                error("Can't have more than 255 arguments.");
+            }
+            argCount++;
+        } while (match(Tokentype::COMMA));
+    }
+    consume(Tokentype::RIGHTPEREN, "Expect ')' after arguments.");
+    return argCount;
+}
+void Compiler::returnStatement()
+{
+    if (currentFunction()->name == "<script>") {
+        error("Can't return from top-level code.");
+    }
+
+    if (match(Tokentype::SEMICOLON)) {
+        emitReturn();
+    } else {
+        expression();
+        consume(Tokentype::SEMICOLON, "Expect ';' after return value.");
+        emitByte(cast(OP_CODE::RETURN));
+    }
 }
 
 void Compiler::statement()
 {
     if (match(Tokentype::PRINT)) {
         printStatement();
+    } else if (match(Tokentype::RETURN)) {
+        returnStatement();
+    } else if (match(Tokentype::SWITCH)) {
+        switchStatement();
+    } else if (match(Tokentype::FOR)) {
+        forStatement();
+    } else if (match(Tokentype::BREAK)) {
+        breakStatement();
+    } else if (match(Tokentype::CONTINUE)) {
+        continueStatement();
     } else if (match(Tokentype::LEFTBRACE)) {
         beginScope();
         block();
@@ -544,6 +746,7 @@ void Compiler::statement()
         whileStatement();
     } else {
         expressionStatement();
+        emitByte(cast(OP_CODE::POP));
     }
 }
 
@@ -609,7 +812,6 @@ void Compiler::variableDeclaration()
 
     if (scope > 0) {
         markInitialized();
-        emitBytes(cast(OP_CODE::SET_LOCAL), static_cast<uint8_t>(locals.size() - 1));
     } else {
         if (isConst) {
             constGlobals.insert(previous.lexeme);
@@ -627,7 +829,9 @@ void Compiler::declaration()
 {
     if (panicMode)
         synchronize();
-    if (match(Tokentype::LET) || match(Tokentype::CONST)) {
+    if (match(Tokentype::FUN)) {
+        funDeclaration();
+    } else if (match(Tokentype::LET) || match(Tokentype::CONST)) {
         variableDeclaration();
     } else {
         statement();
@@ -682,7 +886,7 @@ void Compiler::synchronize()
     }
 }
 
-void Compiler::namedVariable(const Token &name, const bool canAssign)
+void Compiler::namedVariable(const Token& name, const bool canAssign)
 {
     uint8_t getOp, setOp;
     int arg = resolveLocal(name);
@@ -697,7 +901,29 @@ void Compiler::namedVariable(const Token &name, const bool canAssign)
     if (canAssign && match(Tokentype::EQUAL)) {
         expression();
         emitBytes(setOp, static_cast<uint8_t>(arg));
+        consume(Tokentype::SEMICOLON, "Identifier must end with ;");
     } else {
         emitBytes(getOp, static_cast<uint8_t>(arg));
     }
+}
+
+void Compiler::breakStatement()
+{
+    if (loopStack.empty()) {
+        error("Cannot use 'break' outside of a loop.");
+        return;
+    }
+    consume(Tokentype::SEMICOLON, "Expect ';' after 'break'.");
+    int jump = emitJump(cast(OP_CODE::JUMP));
+    loopStack.back().breaks.push_back(jump);
+}
+
+void Compiler::continueStatement()
+{
+    if (loopStack.empty()) {
+        error("Cannot use 'continue' outside of a loop.");
+        return;
+    }
+    consume(Tokentype::SEMICOLON, "Expect ';' after 'continue'.");
+    emitLoop(loopStack.back().continueTarget);
 }

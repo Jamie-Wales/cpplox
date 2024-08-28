@@ -1,5 +1,7 @@
 #include "vMachine.h"
 #include "Instructions.h"
+#include "Object.h"
+#include "Visit.h"
 #include <Stringinterner.h>
 #include <cstdint>
 #include <format>
@@ -7,6 +9,7 @@
 #include <ostream>
 #include <string>
 #define DEBUG_TRACE_EXECUTION
+
 template <typename... Args>
 void vMachine::runtimeError(const char* format, Args&&... args)
 {
@@ -20,6 +23,13 @@ void vMachine::runtimeError(const char* format, Args&&... args)
     const int line = instructions.lines[instruction].lineNumber;
     std::cerr << "[line " << line << "] in script\n";
     resetStack();
+}
+
+void vMachine::defineNative(const std::string& name, NativeFn function)
+{
+    auto internedName = StringInterner::instance().intern(name);
+    auto nativeObj = new Obj(ObjNative(std::move(function)));
+    globals[*internedName] = Value(nativeObj);
 }
 
 int vMachine::readShort()
@@ -57,8 +67,14 @@ void vMachine::ensureStackSize(size_t size, const char* opcode) const
     }
 }
 
+uint8_t vMachine::readByte()
+{
+    return instructions.code[ip++];
+}
+
 void vMachine::execute(const Chunk& newInstructions)
 {
+    frame->function->chunk = newInstructions;
     instructions = newInstructions;
     ip = 0;
     run();
@@ -68,7 +84,7 @@ void vMachine::run()
 {
     try {
         while (ip < instructions.code.size()) {
-            uint8_t byte = instructions.code[ip++];
+            uint8_t byte = readByte();
 #ifdef DEBUG_TRACE_EXECUTION
             std::cout << "          ";
             for (const auto& value : stack) {
@@ -80,14 +96,29 @@ void vMachine::run()
             instructions.disassembleInstruction(ip - 1);
 #endif
             switch (byte) {
+            case cast(OP_CODE::CALL): {
+                int argCount = readByte();
+                if (!callValue(stack[frame->stackOffset + argCount], argCount)) {
+                    return;
+                }
+                frame = &frames[frames.size() - 1];
+                break;
+            }
+            case cast(OP_CODE::RETURN): {
+                Value result = stack.back();
+                stack.resize(frame->stackOffset);
+                frames.pop_back();
+                if (frames.empty()) {
+                    stack.push_back(result);
+                    return;
+                }
+                frame = &frames.back();
+                ip = frame->ip;
+                stack.push_back(result);
+            } break;
             case cast(OP_CODE::LOOP): {
                 uint16_t offset = readShort();
                 ip -= offset;
-            } break;
-            case cast(OP_CODE::RETURN): {
-                if (!stack.empty())
-                    stack.pop_back();
-                state = vState::OK;
             } break;
             case cast(OP_CODE::CONSTANT): {
                 Value constant = readConstant();
@@ -98,10 +129,10 @@ void vMachine::run()
                 stack.push_back(constant);
             } break;
             case cast(OP_CODE::TRUE):
-                stack.emplace_back( true );
+                stack.emplace_back(true);
                 break;
             case cast(OP_CODE::FALSE):
-                stack.emplace_back( false );
+                stack.emplace_back(false);
                 break;
             case cast(OP_CODE::ADD):
                 ensureStackSize(2, "ADD");
@@ -156,12 +187,21 @@ void vMachine::run()
                 stack.push_back(it->second);
             } break;
             case cast(OP_CODE::GET_LOCAL): {
-                uint8_t slot = instructions.code[ip++];
-                stack.push_back(stack[slot]);
+                uint8_t slot = readByte();
+                size_t index = frame->stackOffset + slot;
+#ifdef DEBUG_TRACE_EXECUTION
+                std::cout << "Getting local variable at slot " << (int)slot
+                          << " (stack index " << index << ")" << std::endl;
+#endif
+                if (index >= stack.size()) {
+                    runtimeError("Attempt to access invalid local variable at slot %d.", slot);
+                    return;
+                }
+                stack.push_back(stack[index]);
             } break;
             case cast(OP_CODE::SET_LOCAL): {
-                uint8_t slot = instructions.code[ip++];
-                stack[slot] = stack.back();
+                uint8_t slot = readByte();
+                stack[frame->stackOffset + slot] = stack.back();
             } break;
             case cast(OP_CODE::NOT):
                 ensureStackSize(1, "LOGICAL_NOT");
@@ -234,6 +274,7 @@ void vMachine::swap()
     stack.push_back(top);
     stack.push_back(next);
 }
+
 void vMachine::mult()
 {
     const auto& right = stack.back();
@@ -252,6 +293,7 @@ void vMachine::dup()
 {
     stack.push_back(stack.back());
 }
+
 void vMachine::neg()
 {
     stack.back() = -stack.back();
@@ -266,6 +308,7 @@ void vMachine::logicalNot()
 {
     stack.back() = !stack.back();
 }
+
 void vMachine::greater()
 {
     const auto b = stack.back();
@@ -289,6 +332,7 @@ void vMachine::equal()
     const auto& a = stack.back();
     stack.back() = a == b;
 }
+
 void vMachine::greaterEqual()
 {
     const auto b = stack.back();
@@ -303,4 +347,52 @@ void vMachine::lessEqual()
     stack.pop_back();
     const auto& a = stack.back();
     stack.back() = !(a > b);
+}
+
+void vMachine::call(ObjFunction* function, int argCount)
+{
+    if (argCount != function->arity) {
+        runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+        return;
+    }
+    if (frames.size() == FRAMES_MAX) {
+        runtimeError("Stack overflow.");
+        return;
+    }
+
+    CallFrame callFrame {
+        function,
+        0,
+        stack.size() - argCount - 1
+    };
+    frames.push_back(callFrame);
+    frame = &frames.back();
+}
+
+bool vMachine::callValue(Value callee, int argCount)
+{
+    return std::visit(overloaded {
+                          [this, argCount](Obj* obj) -> bool {
+                              return std::visit(overloaded {
+                                                    [this, argCount](ObjFunction& func) -> bool {
+                                                        call(&func, argCount);
+                                                        return true;
+                                                    },
+                                                    [this, argCount](ObjNative& native) -> bool {
+                                                        Value result = native.function(argCount, &stack[stack.size() - argCount]);
+                                                        stack.resize(stack.size() - argCount - 1);
+                                                        stack.push_back(result);
+                                                        return true;
+                                                    },
+                                                    [this](const auto&) -> bool {
+                                                        runtimeError("Can only call functions and classes.");
+                                                        return false;
+                                                    } },
+                                  obj->as);
+                          },
+                          [this](const auto&) -> bool {
+                              runtimeError("Can only call functions and classes.");
+                              return false;
+                          } },
+        callee.as);
 }

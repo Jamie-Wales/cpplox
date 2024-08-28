@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Instructions.h"
 #include "Value.h"
 #include <cstddef>
@@ -26,14 +25,13 @@ public:
     std::vector<Value> pool;
     std::vector<LineInfo> lines;
 
-    void disassembleChunk(const std::string_view& name) const;
+    void disassembleChunk(const std::string& name) const;
 
     int writeConstant(const Value&, int line);
     void writeChunk(uint8_t byte, int line);
-    void disassembleChunk(const std::string_view& name);
     [[nodiscard]] int disassembleInstruction(int offset) const;
 
-    int byteInstruction(const std::string &name, int offset) const;
+    int byteInstruction(const std::string& name, int offset) const;
 
     int byteInstruction(int offset);
 

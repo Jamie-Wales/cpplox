@@ -1,7 +1,7 @@
 #include "Compiler.h"
+#include "Object.h"
 #include "Scanner.h"
 #include "vMachine.h"
-#include <Tests.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -16,12 +16,14 @@ std::string readFile(const std::string& path)
 
 void runFile(const std::string& path)
 {
+
+    vMachine vm {};
     std::string source = readFile(path);
     Scanner scanner { source };
     auto tokens = scanner.tokenize();
     Compiler compiler { tokens };
-    if (std::optional<Chunk> chunk = compiler.compile()) {
-        vMachine vm { *chunk };
+    if (std::optional<ObjFunction*> main = compiler.compile()) {
+        vm.load(*main);
         vm.run();
     } else {
         std::cerr << "Compilation failed." << std::endl;
@@ -47,8 +49,9 @@ void repl()
         scanner.addEOFToken();
         // #TOOD don't reuse compiler so const expressions work on repl
         Compiler compiler { tokens };
-        if (std::optional<Chunk> chunk = compiler.compile()) {
-            vm.execute(*chunk);
+        if (std::optional<ObjFunction*> main = compiler.compile()) {
+            vm.load(*main);
+            vm.execute();
         } else {
             std::cerr << "Compilation failed." << std::endl;
         }
@@ -56,7 +59,6 @@ void repl()
 }
 int main(int argc, char* argv[])
 {
-    test();
     if (argc == 1) {
         repl();
     } else if (argc == 2) {

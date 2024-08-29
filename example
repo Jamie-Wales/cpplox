@@ -1,10 +1,7 @@
- let a = "jaimsd";
-
-a = "jaiodj!";
-
-
-fn addyo(str) {
-    print(str);
+fn addten(a) {
+    return a + 10;
 }
 
-addyo(a);
+for (let i = 0; i < 10; i++) {
+    print(addten(i));
+}

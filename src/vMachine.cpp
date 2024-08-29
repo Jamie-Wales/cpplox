@@ -8,19 +8,24 @@
 #include <iostream>
 #include <ostream>
 #include <string>
-#define DEBUG_TRACE_EXECUTION
+#include <sys/wait.h>
 
-template <typename... Args>
-void vMachine::runtimeError(const char* format, Args&&... args)
+// #define DEBUG_TRACE_EXECUTION
+size_t& vMachine::ip()
 {
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer), format, std::forward<Args>(args)...);
-    const std::string error_message(buffer);
+    return frames.back().ip;
+}
 
-    std::cerr << error_message << '\n';
+Chunk& vMachine::instructions() const
+{
+    return frames.back().function->chunk;
+}
 
-    const size_t instruction = ip - 1;
-    const int line = instructions.lines[instruction].lineNumber;
+void vMachine::runtimeError(const std::string& error)
+{
+    std::cerr << error << std::endl;
+    const size_t instruction = ip() - 1;
+    const int line = instructions().lines[instruction].lineNumber;
     std::cerr << "[line " << line << "] in script\n";
     resetStack();
 }
@@ -34,22 +39,22 @@ void vMachine::defineNative(const std::string& name, NativeFn function)
 
 int vMachine::readShort()
 {
-    ip += 2;
-    return ((instructions.code[ip - 2] << 8) | instructions.code[ip - 1]);
+    ip() += 2;
+    return ((instructions().code[ip() - 2] << 8) | instructions().code[ip() - 1]);
 }
 
 Value vMachine::readConstant()
 {
-    if (ip > 255)
+    if (ip() > 255)
         return readConstantLong();
-    return instructions.pool[instructions.code[ip++]];
+    return instructions().pool[instructions().code[ip()++]];
 }
 
 Value vMachine::readConstantLong()
 {
-    const uint32_t index = instructions.code[ip] | (instructions.code[ip + 1] << 8) | (instructions.code[ip + 2] << 16);
-    ip += 3;
-    return instructions.pool[index];
+    const uint32_t index = instructions().code[ip()] | (instructions().code[ip() + 1] << 8) | (instructions().code[ip() + 2] << 16);
+    ip() += 3;
+    return instructions().pool[index];
 }
 
 class StackUnderflowError final : public std::runtime_error {
@@ -69,21 +74,32 @@ void vMachine::ensureStackSize(size_t size, const char* opcode) const
 
 uint8_t vMachine::readByte()
 {
-    return instructions.code[ip++];
+    return instructions().code[ip()++];
 }
 
-void vMachine::execute(const Chunk& newInstructions)
+void vMachine::execute()
 {
-    frame->function->chunk = newInstructions;
-    instructions = newInstructions;
-    ip = 0;
+    auto main = frames.back();
+    frames.clear();
+    frames.push_back(main);
+    ip() = 0;
     run();
+}
+
+CallFrame& vMachine::frame()
+{
+    return frames.back();
+}
+
+size_t vMachine::offset()
+{
+    return frame().stackOffset;
 }
 
 void vMachine::run()
 {
     try {
-        while (ip < instructions.code.size()) {
+        while (ip() < instructions().code.size()) {
             uint8_t byte = readByte();
 #ifdef DEBUG_TRACE_EXECUTION
             std::cout << "          ";
@@ -93,32 +109,35 @@ void vMachine::run()
                 std::cout << " ]";
             }
             std::cout << "\n";
-            instructions.disassembleInstruction(ip - 1);
+            instructions().disassembleInstruction(ip() - 1);
 #endif
             switch (byte) {
             case cast(OP_CODE::CALL): {
                 int argCount = readByte();
-                if (!callValue(stack[frame->stackOffset + argCount], argCount)) {
+                if (!callValue(stack[stack.size() - 1 - argCount - offset()], argCount)) {
                     return;
                 }
-                frame = &frames[frames.size() - 1];
                 break;
             }
+            case cast(OP_CODE::NIL): {
+                stack.emplace_back(Value { nullptr });
+                break;
+            }
+
             case cast(OP_CODE::RETURN): {
                 Value result = stack.back();
-                stack.resize(frame->stackOffset);
+                stack.resize(frames.back().stackOffset);
                 frames.pop_back();
+                stack.push_back(result);
                 if (frames.empty()) {
                     stack.push_back(result);
                     return;
                 }
-                frame = &frames.back();
-                ip = frame->ip;
                 stack.push_back(result);
             } break;
             case cast(OP_CODE::LOOP): {
                 uint16_t offset = readShort();
-                ip -= offset;
+                ip() -= offset;
             } break;
             case cast(OP_CODE::CONSTANT): {
                 Value constant = readConstant();
@@ -168,7 +187,7 @@ void vMachine::run()
                     std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
                 } else {
                     if (globals.contains(*internedString)) {
-                        runtimeError("Cannot redefine previously defined variable {}", internedString->c_str());
+                        runtimeError(std::format("Cannot redefine previously defined variable {}", *internedString));
                     }
                     globals[*internedString] = value;
                 }
@@ -177,31 +196,32 @@ void vMachine::run()
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
                 globals[name.to_string()] = stack.back();
+                stack.pop_back();
             } break;
             case cast(OP_CODE::GET_GLOBAL): {
                 auto name = readConstant();
                 auto it = globals.find(name.to_string());
                 if (it == globals.end()) {
-                    runtimeError("Undefined variable {}.", name.to_string().c_str());
+                    runtimeError(std::format("Undefined variable {}.", name.to_string()));
                 }
                 stack.push_back(it->second);
             } break;
             case cast(OP_CODE::GET_LOCAL): {
                 uint8_t slot = readByte();
-                size_t index = frame->stackOffset + slot;
+                size_t index = offset() + slot;
 #ifdef DEBUG_TRACE_EXECUTION
-                std::cout << "Getting local variable at slot " << (int)slot
+                std::cout << "Getting local variable at slot " << static_cast<int>(slot)
                           << " (stack index " << index << ")" << std::endl;
 #endif
                 if (index >= stack.size()) {
-                    runtimeError("Attempt to access invalid local variable at slot %d.", slot);
+                    runtimeError(std::format("Attempt to access invalid local variable at slot {}", slot));
                     return;
                 }
                 stack.push_back(stack[index]);
             } break;
             case cast(OP_CODE::SET_LOCAL): {
                 uint8_t slot = readByte();
-                stack[frame->stackOffset + slot] = stack.back();
+                stack[offset() + slot] = stack.back();
             } break;
             case cast(OP_CODE::NOT):
                 ensureStackSize(1, "LOGICAL_NOT");
@@ -231,12 +251,12 @@ void vMachine::run()
                 ensureStackSize(1, "JUMP_IF_FALSE");
                 int offset = readShort();
                 if (!stack.back().isTruthy()) {
-                    ip += offset;
+                    ip() += offset;
                 }
             } break;
             case cast(OP_CODE::JUMP): {
                 int offset = readShort();
-                ip += offset;
+                ip() += offset;
             } break;
             case cast(OP_CODE::SWAP): {
                 swap();
@@ -352,7 +372,7 @@ void vMachine::lessEqual()
 void vMachine::call(ObjFunction* function, int argCount)
 {
     if (argCount != function->arity) {
-        runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+        runtimeError(std::format("Expected {} arguments but got {}.", function->arity, argCount));
         return;
     }
     if (frames.size() == FRAMES_MAX) {
@@ -363,10 +383,21 @@ void vMachine::call(ObjFunction* function, int argCount)
     CallFrame callFrame {
         function,
         0,
-        stack.size() - argCount - 1
+        // this is not stack size -1 because we know the function will be on the stack
+        stack.size() - argCount,
     };
     frames.push_back(callFrame);
-    frame = &frames.back();
+}
+
+void vMachine::load(ObjFunction* mainFunction)
+{
+    const CallFrame callFrame {
+        mainFunction,
+        0,
+        0,
+    };
+
+    frames.push_back(callFrame);
 }
 
 bool vMachine::callValue(Value callee, int argCount)
@@ -390,8 +421,8 @@ bool vMachine::callValue(Value callee, int argCount)
                                                     } },
                                   obj->as);
                           },
-                          [this](const auto&) -> bool {
-                              runtimeError("Can only call functions and classes.");
+                          [this](const auto& b) -> bool {
+                              runtimeError("Not an Object");
                               return false;
                           } },
         callee.as);

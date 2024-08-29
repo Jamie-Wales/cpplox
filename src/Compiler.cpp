@@ -8,7 +8,17 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
-#define DEBUG_PRINT_CODE
+
+Chunk& Compiler::currentChunk() const
+{
+    return functions.back()->chunk;
+}
+
+void Compiler::pushFunction(const std::string& name)
+{
+    functions.push_back(new ObjFunction { name, 0, {} });
+}
+
 std::string tokenTypeToString(const Tokentype type)
 {
     switch (type) {
@@ -105,7 +115,7 @@ std::string tokenTypeToString(const Tokentype type)
     }
 }
 /* # TODO fix const */
-std::optional<Chunk> Compiler::compile()
+std::optional<ObjFunction*> Compiler::compile()
 {
     hadError = false;
     panicMode = false;
@@ -114,8 +124,7 @@ std::optional<Chunk> Compiler::compile()
         if (panicMode)
             synchronize();
     }
-    endCompiler();
-    return hadError ? std::nullopt : std::make_optional(currentChunk);
+    return hadError ? std::nullopt : std::make_optional(endCompiler());
 }
 
 void Compiler::beginScope()
@@ -127,7 +136,6 @@ void Compiler::endScope()
 {
     scope--;
     while (!locals.empty() && locals.back().scopeDepth > scope) {
-        std::cout << "Popping local: " << locals.back().token.lexeme << std::endl;
         emitByte(cast(OP_CODE::POP));
         locals.pop_back();
     }
@@ -245,34 +253,24 @@ void Compiler::funDeclaration()
 
 void Compiler::function(FunctionType type)
 {
-    ObjFunction* function = new ObjFunction(previous.lexeme, 0, Chunk {});
-    beginScope();
+
+    pushFunction(previous.lexeme);
     consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
+    beginScope();
     if (!check(Tokentype::RIGHTPEREN)) {
         do {
-            function->arity++;
+            currentFunction()->arity++;
             uint8_t paramConstant = parseVariable("Expect parameter name.");
             defineVariable(paramConstant);
         } while (match(Tokentype::COMMA));
     }
     consume(Tokentype::RIGHTPEREN, "Expect ')' after parameters.");
     consume(Tokentype::LEFTBRACE, "Expect '{' before function body.");
-
-    compileInto(function->chunk);
-    emitConstant(makeFunction(function));
+    block();
+    emitReturn();
     endScope();
-}
-
-void Compiler::compileInto(Chunk& chunk)
-{
-    while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
-        declaration();
-    }
-    consume(Tokentype::RIGHTBRACE, "Expect '}' after block.");
-    if (chunk.code.empty() || chunk.code.back() != cast(OP_CODE::RETURN)) {
-        emitByte(cast(OP_CODE::NIL));
-        emitByte(cast(OP_CODE::RETURN));
-    }
+    const auto func = endCompiler();
+    emitConstant(makeFunction(func));
 }
 
 Value Compiler::makeFunction(ObjFunction* function)
@@ -312,10 +310,11 @@ void Compiler::errorAt(const Token& token, const std::string& message)
 ObjFunction* Compiler::endCompiler()
 {
 #ifdef DEBUG_PRINT_CODE
-    currentChunk.disassembleChunk(currentFunction()->name);
+    currentChunk().disassembleChunk(currentFunction()->name);
 #endif
-    emitReturn();
-    return functions[functions.size()];
+    auto pFunc = functions.back();
+    functions.pop_back();
+    return pFunc;
 }
 
 void Compiler::expression()
@@ -541,12 +540,12 @@ void Compiler::literal(bool canAssign)
 
 void Compiler::emitReturn()
 {
-    emitByte(cast(OP_CODE::RETURN));
+    emitBytes(cast(OP_CODE::NIL), cast(OP_CODE::RETURN));
 }
 
 uint8_t Compiler::emitConstant(const Value& value)
 {
-    return currentChunk.writeConstant(value, previous.line);
+    return currentChunk().writeConstant(value, previous.line);
 }
 
 bool Compiler::check(const Tokentype type) const
@@ -559,18 +558,18 @@ int Compiler::emitJump(const uint8_t instruction)
     emitByte(instruction);
     emitByte(0xff);
     emitByte(0xff);
-    return currentChunk.code.size() - 2;
+    return currentChunk().code.size() - 2;
 }
 
 void Compiler::patchJump(const int offset)
 {
-    const int jump = currentChunk.code.size() - offset - 2;
+    const int jump = currentChunk().code.size() - offset - 2;
 
     if (jump > UINT16_MAX) {
         error("Too much code to jump over.");
     }
-    currentChunk.code[offset] = (jump >> 8) & 0xff;
-    currentChunk.code[offset + 1] = jump & 0xff;
+    currentChunk().code[offset] = (jump >> 8) & 0xff;
+    currentChunk().code[offset + 1] = jump & 0xff;
 }
 
 void Compiler::ifStatement()
@@ -606,8 +605,7 @@ void Compiler::expressionStatement()
 void Compiler::emitLoop(const int loopStart)
 {
     emitByte(cast(OP_CODE::LOOP));
-
-    const int offset = currentChunk.code.size() - loopStart + 2;
+    const int offset = currentChunk().code.size() - loopStart + 2;
     if (offset > UINT16_MAX)
         error("Loop body too large.");
 
@@ -618,7 +616,7 @@ void Compiler::emitLoop(const int loopStart)
 void Compiler::whileStatement()
 {
     LoopInfo loop;
-    loop.start = currentChunk.code.size();
+    loop.start = currentChunk().code.size();
     loop.scopeDepth = scope;
     loop.continueTarget = loop.start;
     loopStack.push_back(loop);
@@ -651,7 +649,7 @@ void Compiler::forStatement()
         expressionStatement();
     }
     LoopInfo loop;
-    loop.start = currentChunk.code.size();
+    loop.start = currentChunk().code.size();
     loop.scopeDepth = scope;
     int exitJump = -1;
     if (!match(Tokentype::SEMICOLON)) {
@@ -662,7 +660,7 @@ void Compiler::forStatement()
     }
     if (!match(Tokentype::RIGHTPEREN)) {
         int bodyJump = emitJump(cast(OP_CODE::JUMP));
-        int incrementStart = currentChunk.code.size();
+        int incrementStart = currentChunk().code.size();
         expression();
         emitByte(cast(OP_CODE::POP));
         consume(Tokentype::RIGHTPEREN, "Expect ')' after for clauses.");
@@ -689,7 +687,6 @@ void Compiler::call(bool canAssign)
 {
     uint8_t argCount = argumentList();
     emitBytes(cast(OP_CODE::CALL), argCount);
-    consume(Tokentype::SEMICOLON, "End call with ;");
 }
 
 uint8_t Compiler::argumentList()
@@ -709,7 +706,7 @@ uint8_t Compiler::argumentList()
 }
 void Compiler::returnStatement()
 {
-    if (currentFunction()->name == "<script>") {
+    if (currentFunction()->name == "Main") {
         error("Can't return from top-level code.");
     }
 
@@ -746,7 +743,6 @@ void Compiler::statement()
         whileStatement();
     } else {
         expressionStatement();
-        emitByte(cast(OP_CODE::POP));
     }
 }
 
@@ -784,7 +780,7 @@ void Compiler::defineVariable(const uint8_t global)
 
 void Compiler::emitByte(const uint8_t byte)
 {
-    currentChunk.writeChunk(byte, previous.line);
+    currentChunk().writeChunk(byte, previous.line);
 }
 
 void Compiler::emitBytes(const uint8_t byte1, const uint8_t byte2)

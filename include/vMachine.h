@@ -1,6 +1,7 @@
 #pragma once
 #include "Chunk.h"
 #include "Object.h"
+#include <cstdint>
 #include <unordered_map>
 #include <utility>
 
@@ -8,7 +9,8 @@ enum class vState { OK,
     BAD };
 
 struct CallFrame {
-    ObjFunction* function;
+    ObjFunction*
+        function;
     size_t ip;
     size_t stackOffset;
 };
@@ -16,31 +18,14 @@ struct CallFrame {
 class vMachine {
 public:
     std::vector<CallFrame> frames;
-    CallFrame* frame;
-
     void call(ObjFunction* function, int argCount);
     bool callValue(Value callee, int argCount);
-    explicit vMachine(Chunk chunk)
-            : globals{}
-            , instructions(std::move(chunk))
-            , ip(0)
-            , stack{}
+    explicit vMachine()
+        : globals {}
+        , stack {}
     {
-        auto* mainFunction = new ObjFunction("main", 0, instructions);
-        frames.push_back({mainFunction, 0, 0});
-        frame = &frames.back();
     }
 
-    vMachine()
-            : globals{}
-            , instructions{}
-            , ip(0)
-            , stack{}
-    {
-        auto* mainFunction = new ObjFunction("main", 0, Chunk{});
-        frames.push_back({mainFunction, 0, 0});
-        frame = &frames.back();
-    }
     vMachine(vMachine&&) = default;
     vMachine(const vMachine&) = default;
     vMachine& operator=(vMachine&&) = default;
@@ -49,22 +34,19 @@ public:
     Value readConstant();
     Value readConstantLong();
     std::unordered_map<std::string, Value> globals;
-    template <typename... Args>
-    void runtimeError(const char* format, Args&&... args);
+    void runtimeError(const std::string& error);
     [[nodiscard]] vState getState() const
     {
         return this->state;
     }
     void run();
-    void execute(const Chunk& newInstructions);
-
+    void execute();
+    void load(ObjFunction* mainFunction);
     void defineNative(const std::string& name, NativeFn function);
 
 private:
     vState state
         = vState::OK;
-    Chunk instructions;
-    int ip = 0;
     static constexpr size_t FRAMES_MAX = 64;
     static constexpr size_t STACK_MAX = FRAMES_MAX * 256;
     int readShort();
@@ -84,6 +66,10 @@ private:
     void less();
     void greaterEqual();
     void lessEqual();
+    size_t& ip();
     uint8_t readByte();
+    Chunk& instructions() const;
+    size_t offset();
     void ensureStackSize(size_t size, const char* opcode) const;
+    CallFrame& frame();
 };

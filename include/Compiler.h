@@ -35,12 +35,10 @@ public:
         , current(0)
     {
         initRules();
-        functions.push_back(new ObjFunction("<script>", 0, Chunk {}));
-        currentChunk = functions[0]->chunk;
+        pushFunction("Main");
         locals = {};
-        locals.push_back({});
     }
-    std::optional<Chunk> compile();
+    std::optional<ObjFunction*> compile();
 
 private:
     struct LoopInfo {
@@ -67,14 +65,12 @@ private:
     // #TODO look at whether its worth changing this to vector of hashmaps
     std::vector<Local> locals = {};
     std::unordered_map<std::string, int> stringConstants;
-    Chunk currentChunk { 100 };
     std::vector<Token> tokens;
     bool hadError = false;
     bool panicMode = false;
     size_t current;
     Token previous;
     std::unordered_map<Tokentype, ParseRule> rules;
-    size_t functionP;
     ObjFunction* currentFunction();
     /* ---- Parsing ---- */
     void emitLoop(int loopStart);
@@ -132,6 +128,7 @@ private:
     void call(bool canAssign);
     void returnStatement();
     Value makeFunction(ObjFunction* function);
-
-    void compileInto(Chunk &chunk);
+    void pushFunction(const std::string& name);
+    Chunk& currentChunk() const;
+    void compileInto(Chunk& chunk);
 };

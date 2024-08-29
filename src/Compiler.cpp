@@ -9,6 +9,7 @@
 #include <iostream>
 #include <optional>
 
+
 Chunk& Compiler::currentChunk() const
 {
     return functions.back()->chunk;
@@ -136,7 +137,6 @@ void Compiler::endScope()
 {
     scope--;
     while (!locals.empty() && locals.back().scopeDepth > scope) {
-        emitByte(cast(OP_CODE::POP));
         locals.pop_back();
     }
 }
@@ -267,8 +267,9 @@ void Compiler::function(FunctionType type)
     consume(Tokentype::RIGHTPEREN, "Expect ')' after parameters.");
     consume(Tokentype::LEFTBRACE, "Expect '{' before function body.");
     block();
-    emitReturn();
     endScope();
+    emitReturn();
+
     const auto func = endCompiler();
     emitConstant(makeFunction(func));
 }

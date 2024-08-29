@@ -3,7 +3,7 @@
 #include "Object.h"
 #include <cstdint>
 #include <unordered_map>
-#include <utility>
+#include "stdlibfuncs.h"
 
 enum class vState { OK,
     BAD };
@@ -24,6 +24,7 @@ public:
         : globals {}
         , stack {}
     {
+
     }
 
     vMachine(vMachine&&) = default;
@@ -34,6 +35,7 @@ public:
     Value readConstant();
     Value readConstantLong();
     std::unordered_map<std::string, Value> globals;
+    template <typename... Args>
     void runtimeError(const std::string& error);
     [[nodiscard]] vState getState() const
     {
@@ -45,6 +47,25 @@ public:
     void defineNative(const std::string& name, NativeFn function);
 
 private:
+    void defineNativeFunctions() {
+        this->defineNative("abs", absNative);
+        this->defineNative("pow", powNative);
+        this->defineNative("sqrt", sqrtNative);
+        this->defineNative("floor", floorNative);
+        this->defineNative("ceil", ceilNative);
+        this->defineNative("round", roundNative);
+        this->defineNative("random", randomNative);
+        this->defineNative("isNumber", isNumberNative);
+        this->defineNative("isString", isStringNative);
+        this->defineNative("isNull", isNullNative);
+        this->defineNative("isBool", isBoolNative);
+        this->defineNative("toNumber", toNumberNative);
+        this->defineNative("toBoolean", toBooleanNative);
+        this->defineNative("printNative", printNative);
+        this->defineNative("input", inputNative);
+        this->defineNative("length", lengthNative);
+        this->defineNative("clock", clockNative);
+    }
     vState state
         = vState::OK;
     static constexpr size_t FRAMES_MAX = 64;
@@ -69,6 +90,9 @@ private:
     size_t& ip();
     uint8_t readByte();
     Chunk& instructions() const;
+
+    void runtimeError(const std::string &error);
+
     size_t offset();
     void ensureStackSize(size_t size, const char* opcode) const;
     CallFrame& frame();

@@ -8,9 +8,8 @@
 #include <iostream>
 #include <ostream>
 #include <string>
-#include <sys/wait.h>
+#include "stdlibfuncs.h"
 
-// #define DEBUG_TRACE_EXECUTION
 size_t& vMachine::ip()
 {
     return frames.back().ip;
@@ -197,7 +196,9 @@ void vMachine::run()
                 auto name = readConstant();
                 globals[name.to_string()] = stack.back();
                 stack.pop_back();
-            } break;
+                stack.pop_back();
+                break;
+            }
             case cast(OP_CODE::GET_GLOBAL): {
                 auto name = readConstant();
                 auto it = globals.find(name.to_string());
@@ -398,6 +399,7 @@ void vMachine::load(ObjFunction* mainFunction)
     };
 
     frames.push_back(callFrame);
+    defineNativeFunctions();
 }
 
 bool vMachine::callValue(Value callee, int argCount)
@@ -410,7 +412,7 @@ bool vMachine::callValue(Value callee, int argCount)
                                                         return true;
                                                     },
                                                     [this, argCount](ObjNative& native) -> bool {
-                                                        Value result = native.function(argCount, &stack[stack.size() - argCount]);
+                                                        const Value result = native.function(argCount, &stack[stack.size() - argCount]);
                                                         stack.resize(stack.size() - argCount - 1);
                                                         stack.push_back(result);
                                                         return true;

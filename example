@@ -1,7 +1,5 @@
-fn addten(a) {
-    return a + 10;
-}
+print("Hello please enter some text");
 
-for (let i = 0; i < 10; i++) {
-    print(addten(i));
-}
+let v = input();
+
+print(v + " is cool and so is Jamie");

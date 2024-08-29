@@ -413,7 +413,8 @@ bool vMachine::callValue(Value callee, int argCount)
                                                     },
                                                     [this, argCount](ObjNative& native) -> bool {
                                                         const Value result = native.function(argCount, &stack[stack.size() - argCount]);
-                                                        stack.resize(stack.size() - argCount - 1);
+                                                        stack.pop_back();
+                                                        stack.pop_back();
                                                         stack.push_back(result);
                                                         return true;
                                                     },

@@ -140,6 +140,16 @@ inline Value lengthNative(int argCount, Value* args) {
 }
 
 inline Value clockNative(int argCount, Value* args) {
-    return Value(static_cast<double>(std::clock()) / CLOCKS_PER_SEC);
+    if (argCount != 0) {
+        return Value(-1.0);  // Example error return
+    }
+
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+
+    double seconds = static_cast<double>(nanoseconds.count()) / 1'000'000'000.0;
+
+    return Value(seconds);
 }
 

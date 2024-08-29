@@ -1,5 +1,1 @@
-print("Hello please enter some text");
-
-let v = input();
-
-print(v + " is cool and so is Jamie");
+t

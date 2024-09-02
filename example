@@ -1,1 +1,10 @@
-t
+for (let i = 0; i < 10; i++) {
+switch (i) {
+1 -> {
+        print("hello");
+    }
+    _ -> {
+            print("poop");
+        }
+}
+}

@@ -1,0 +1,50 @@
+[
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Chunk.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Chunk.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Chunk.cpp",
+  "output": "CMakeFiles/vm.dir/src/Chunk.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Compiler.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Compiler.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Compiler.cpp",
+  "output": "CMakeFiles/vm.dir/src/Compiler.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Object.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Object.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Object.cpp",
+  "output": "CMakeFiles/vm.dir/src/Object.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Scanner.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Scanner.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Scanner.cpp",
+  "output": "CMakeFiles/vm.dir/src/Scanner.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Stringinterner.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Stringinterner.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Stringinterner.cpp",
+  "output": "CMakeFiles/vm.dir/src/Stringinterner.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/Value.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/Value.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/Value.cpp",
+  "output": "CMakeFiles/vm.dir/src/Value.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/main.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/main.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/main.cpp",
+  "output": "CMakeFiles/vm.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/jamie/Dev/vm/cpplox/cmake-debug-build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/jamie/Dev/vm/cpplox/include -g -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -o CMakeFiles/vm.dir/src/vMachine.cpp.o -c /Users/jamie/Dev/vm/cpplox/src/vMachine.cpp",
+  "file": "/Users/jamie/Dev/vm/cpplox/src/vMachine.cpp",
+  "output": "CMakeFiles/vm.dir/src/vMachine.cpp.o"
+}
+]

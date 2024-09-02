@@ -2,13 +2,13 @@
 #include "Instructions.h"
 #include "Object.h"
 #include "Visit.h"
+#include "stdlibfuncs.h"
 #include <Stringinterner.h>
 #include <cstdint>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
-#include "stdlibfuncs.h"
 
 size_t& vMachine::ip()
 {
@@ -36,10 +36,13 @@ void vMachine::defineNative(const std::string& name, NativeFn function)
     globals[*internedName] = Value(nativeObj);
 }
 
-int vMachine::readShort()
+int16_t vMachine::readShort()
 {
+    uint8_t high = instructions().code[ip()];
+    uint8_t low = instructions().code[ip() + 1];
     ip() += 2;
-    return ((instructions().code[ip() - 2] << 8) | instructions().code[ip() - 1]);
+    int16_t result = (high << 8) | low;
+    return result;
 }
 
 Value vMachine::readConstant()

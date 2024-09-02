@@ -1,9 +1,9 @@
 #pragma once
 #include "Chunk.h"
 #include "Object.h"
+#include "stdlibfuncs.h"
 #include <cstdint>
 #include <unordered_map>
-#include "stdlibfuncs.h"
 
 enum class vState { OK,
     BAD };
@@ -24,7 +24,6 @@ public:
         : globals {}
         , stack {}
     {
-
     }
 
     vMachine(vMachine&&) = default;
@@ -47,7 +46,8 @@ public:
     void defineNative(const std::string& name, NativeFn function);
 
 private:
-    void defineNativeFunctions() {
+    void defineNativeFunctions()
+    {
         this->defineNative("abs", absNative);
         this->defineNative("pow", powNative);
         this->defineNative("sqrt", sqrtNative);
@@ -70,7 +70,7 @@ private:
         = vState::OK;
     static constexpr size_t FRAMES_MAX = 64;
     static constexpr size_t STACK_MAX = FRAMES_MAX * 256;
-    int readShort();
+    int16_t readShort();
     std::vector<Value> stack;
     void swap();
     void dup();
@@ -91,7 +91,7 @@ private:
     uint8_t readByte();
     Chunk& instructions() const;
 
-    void runtimeError(const std::string &error);
+    void runtimeError(const std::string& error);
 
     size_t offset();
     void ensureStackSize(size_t size, const char* opcode) const;

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Chunk.h"
 #include "Object.h"
 #include "Token.h"
@@ -7,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
 enum class Precedence {
     NONE,
     ASSIGNMENT,
@@ -20,14 +22,17 @@ enum class Precedence {
     CALL,
     PRIMARY
 };
+
 enum class FunctionType {
     FUNCTION
 };
+
 struct Local {
     Token token;
     int scopeDepth;
     bool isConst;
 };
+
 class Compiler {
 public:
     explicit Compiler(const std::vector<Token>& tokens)
@@ -35,7 +40,7 @@ public:
         , current(0)
     {
         initRules();
-        pushFunction("Main");
+        pushFunction({ Tokentype::IDENTIFIER, "main", 0, 0 });
         locals = {};
     }
     std::optional<ObjFunction*> compile();
@@ -128,7 +133,7 @@ private:
     void call(bool canAssign);
     void returnStatement();
     Value makeFunction(ObjFunction* function);
-    void pushFunction(const std::string& name);
+    void pushFunction(const Token& name);
     Chunk& currentChunk() const;
     void compileInto(Chunk& chunk);
 };

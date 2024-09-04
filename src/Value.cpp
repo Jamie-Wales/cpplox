@@ -1,6 +1,6 @@
 #include "Value.h"
 #include "Object.h"
-#include "Stringinterner.h"
+#include "StringInterner.h"
 #include "Visit.h"
 #include <cstddef>
 #include <format>

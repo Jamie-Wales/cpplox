@@ -1,15 +1,13 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include "Object.h"
+#include "StringInterner.h"
 #include "Visit.h"
-#include "stdlibfuncs.h"
-#include <Stringinterner.h>
 #include <cstdint>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
-
 size_t& vMachine::ip()
 {
     return frames.back().ip;
@@ -125,7 +123,6 @@ void vMachine::run()
                 stack.emplace_back(Value { nullptr });
                 break;
             }
-
             case cast(OP_CODE::RETURN): {
                 Value result = stack.back();
                 stack.resize(frames.back().stackOffset);
@@ -174,7 +171,6 @@ void vMachine::run()
             case cast(OP_CODE::PRINT):
                 ensureStackSize(1, "PRINT");
                 stack.back().print();
-                stack.pop_back();
                 std::cout << std::endl;
                 break;
             case cast(OP_CODE::POP):
@@ -183,7 +179,6 @@ void vMachine::run()
             case cast(OP_CODE::DEFINE_GLOBAL): {
                 auto name = readConstant();
                 auto value = stack.back();
-                stack.pop_back();
                 auto internedString = StringInterner::instance().find(name.to_string());
                 if (!internedString) {
                     std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
@@ -193,7 +188,6 @@ void vMachine::run()
                     }
                     globals[*internedString] = value;
                 }
-                stack.pop_back();
             } break;
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
@@ -387,8 +381,7 @@ void vMachine::call(ObjFunction* function, int argCount)
     CallFrame callFrame {
         function,
         0,
-        // this is not stack size -1 because we know the function will be on the stack
-        stack.size() - argCount,
+        stack.size() - argCount - 1,
     };
     frames.push_back(callFrame);
 }

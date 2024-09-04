@@ -4,7 +4,6 @@
 #include "stdlibfuncs.h"
 #include <cstdint>
 #include <unordered_map>
-
 enum class vState { OK,
     BAD };
 

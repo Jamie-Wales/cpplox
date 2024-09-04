@@ -8,16 +8,17 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
-
-
+#define DEBUG_PRINT_CODE
 Chunk& Compiler::currentChunk() const
 {
     return functions.back()->chunk;
 }
 
-void Compiler::pushFunction(const std::string& name)
+void Compiler::pushFunction(const Token& name)
 {
-    functions.push_back(new ObjFunction { name, 0, {} });
+    auto fun = new ObjFunction { name.lexeme, 0, {} };
+    functions.push_back(fun);
+    locals.push_back({ name, scope, false });
 }
 
 std::string tokenTypeToString(const Tokentype type)
@@ -254,9 +255,9 @@ void Compiler::funDeclaration()
 void Compiler::function(FunctionType type)
 {
 
-    pushFunction(previous.lexeme);
-    consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
     beginScope();
+    pushFunction(previous);
+    consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
     if (!check(Tokentype::RIGHTPEREN)) {
         do {
             currentFunction()->arity++;
@@ -315,6 +316,7 @@ ObjFunction* Compiler::endCompiler()
 #endif
     auto pFunc = functions.back();
     functions.pop_back();
+    scope--;
     return pFunc;
 }
 
@@ -352,9 +354,9 @@ void Compiler::printStatement()
     consume(Tokentype::LEFTPEREN, "Expect '(' after 'print'.");
     expression();
     consume(Tokentype::RIGHTPEREN, "Expect ')' after expression in print statement.");
-    consume(Tokentype::SEMICOLON, "Expect ';' after print statement.");
     emitByte(cast(OP_CODE::PRINT));
 }
+
 Compiler::ParseRule Compiler::getRule(const Tokentype type)
 {
     const auto it = rules.find(type);
@@ -598,6 +600,7 @@ void Compiler::ifStatement()
 void Compiler::expressionStatement()
 {
     expression();
+    consume(Tokentype::SEMICOLON, "Expect ';' after expression");
     if (panicMode) {
         synchronize();
     }
@@ -898,7 +901,6 @@ void Compiler::namedVariable(const Token& name, const bool canAssign)
     if (canAssign && match(Tokentype::EQUAL)) {
         expression();
         emitBytes(setOp, static_cast<uint8_t>(arg));
-        consume(Tokentype::SEMICOLON, "Identifier must end with ;");
     } else {
         emitBytes(getOp, static_cast<uint8_t>(arg));
     }

@@ -1,6 +1,6 @@
 #pragma once
 #include "Object.h"
-#include "StringInterner.h"
+#include "Stringinterner.h"
 #include "Value.h"
 #include <cmath>
 #include <iostream>

@@ -1,6 +1,6 @@
 #include "Value.h"
 #include "Object.h"
-#include "StringInterner.h"
+#include "Stringinterner.h"
 #include "Visit.h"
 #include <cstddef>
 #include <format>
@@ -19,6 +19,21 @@ void Value::print() const
         as);
 }
 
+ObjFunction* Value::asFunc() const
+{
+    return std::visit(overloaded {
+                          [](Obj* obj) -> ObjFunction* {
+                              if (auto func = std::get_if<ObjFunction>(&obj->as)) {
+                                  return func;
+                              }
+
+                              throw std::runtime_error { "Not a function" };
+                          },
+                          [](auto) -> ObjFunction* {
+                              throw std::runtime_error { "Not a function" };
+                          } },
+        as);
+}
 std::string Value::to_string() const
 {
     return std::visit(overloaded {

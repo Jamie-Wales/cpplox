@@ -3,6 +3,7 @@
 #include "Chunk.h"
 #include "Object.h"
 #include "Token.h"
+#include <climits>
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
@@ -52,13 +53,22 @@ private:
         std::vector<int> breaks;
         int continueTarget;
     };
+    struct Upvalue {
+        bool isLocal;
+        int index;
+    };
+
     std::vector<LoopInfo> loopStack;
     std::vector<ObjFunction*> functions;
     void breakStatement();
     void continueStatement();
     void switchStatement();
+
+    size_t max = UINT_MAX;
+    std::vector<Upvalue> upvalues;
     // #TODO look at whether its worth changing this to vector of hashmaps
-    std::unordered_set<std::string> constGlobals;
+    std::unordered_set<std::string>
+        constGlobals;
     using ParseFn = void (Compiler::*)(bool canAssign);
     struct ParseRule {
         ParseFn prefix;
@@ -124,7 +134,7 @@ private:
     void declareVariable();
     void markInitialized();
     void block();
-    int resolveLocal(const Token& name);
+    int resolveLocal(const Token& name, bool scoped);
     void addLocal(const Token& name);
     void forStatement();
     void funDeclaration();
@@ -136,4 +146,6 @@ private:
     void pushFunction(const Token& name);
     Chunk& currentChunk() const;
     void compileInto(Chunk& chunk);
+    int resolveUpValue(const Token& name);
+    int addUpValue(uint8_t index, bool isLocal);
 };

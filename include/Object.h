@@ -15,17 +15,19 @@ struct ObjFunction {
     std::string name;
     int arity;
     Chunk chunk;
-
+    size_t upValueCount;
     ObjFunction(std::string name, int arity, Chunk chunk)
-        : name(std::move(name))
-        , arity(arity)
-        , chunk(std::move(chunk))
+        : name { std::move(name) }
+        , arity { arity }
+        , chunk { std::move(chunk) }
+        , upValueCount { 0 }
     {
     }
     ObjFunction()
         : name("")
         , arity(0)
         , chunk(Chunk {})
+        , upValueCount { 0 }
     {
     }
 };
@@ -45,9 +47,13 @@ struct ObjNative {
 struct ObjInstance {
 };
 
+struct ObjClosure {
+    ObjFunction* pFunction;
+};
+
 class Obj {
 public:
-    std::variant<ObjString, ObjFunction, ObjInstance, ObjNative> as;
+    std::variant<ObjString, ObjFunction, ObjInstance, ObjNative, ObjClosure> as;
 
     template <typename T>
     explicit Obj(T value)

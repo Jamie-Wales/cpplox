@@ -29,15 +29,15 @@ public:
 
     int writeConstant(const Value&, int line);
     void writeChunk(uint8_t byte, int line);
-    [[nodiscard]] int disassembleInstruction(int offset) const;
+    int disassembleInstruction(int offset) const;
 
     int byteInstruction(const std::string& name, int offset) const;
 
     int byteInstruction(int offset);
 
-    [[nodiscard]] int constantInstruction(const std::string& name, int offset) const;
-    [[nodiscard]] int constantLongInstruction(const std::string& name, int offset) const;
-    [[nodiscard]] int disassembleJump(const std::string& name, int sign, int offset) const;
+    int constantInstruction(const std::string& name, int offset) const;
+    int constantLongInstruction(const std::string& name, int offset) const;
+    int disassembleJump(const std::string& name, int sign, int offset) const;
     static int simpleInstruction(const std::string& name, int offset);
     int addConstant(const Value& value);
 

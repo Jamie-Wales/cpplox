@@ -35,7 +35,7 @@ public:
     std::unordered_map<std::string, Value> globals;
     template <typename... Args>
     void runtimeError(const std::string& error);
-    [[nodiscard]] vState getState() const
+    vState getState() const
     {
         return this->state;
     }

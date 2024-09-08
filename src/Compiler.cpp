@@ -5,6 +5,7 @@
 #include "Stringinterner.h"
 #include "Token.h"
 #include "Value.h"
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <optional>
@@ -172,10 +173,12 @@ void Compiler::addLocal(const Token& name)
     locals.push_back(Local { name, -1, isConst });
 }
 
-int Compiler::resolveLocal(const Token& name)
+int Compiler::resolveLocal(const Token& name, bool scoped = true)
 {
-    for (int i = locals.size() - 1; i >= 0; i--) {
+    for (int i = locals.size() - 1; i > -1; i--) {
         auto& [token, scopeDepth, isConst] = locals[i];
+        if (scoped && scopeDepth != scope)
+            return -1;
         if (name.lexeme == token.lexeme) {
             if (scopeDepth == -1) {
                 error("Can't read local variable in its own initializer.");
@@ -272,7 +275,42 @@ void Compiler::function(FunctionType type)
     emitReturn();
 
     const auto func = endCompiler();
-    emitConstant(makeFunction(func));
+    emitBytes(cast(OP_CODE::CLOSURE), emitConstant(makeFunction(func)));
+
+    for (int i = 0; i < currentFunction()->upValueCount; i++) {
+        emitByte(upvalues[i].isLocal ? 1 : 0);
+        emitByte(upvalues[i].index);
+    }
+}
+
+int Compiler::addUpValue(uint8_t index, bool isLocal)
+{
+    size_t& count = currentFunction()->upValueCount;
+    for (size_t i = 0; i < count; i++) {
+        Upvalue& val = upvalues[i];
+        if (val.index == index && val.isLocal == isLocal)
+            return i;
+    }
+    upvalues.emplace_back(Upvalue { isLocal, index });
+    return count++;
+}
+
+int Compiler::resolveUpValue(const Token& name)
+{
+    if (functions.size() == 1) {
+        return -1;
+    }
+    int local = resolveLocal(name);
+    if (local != -1) {
+        return addUpValue(local, true);
+    }
+
+    int upvalue = resolveLocal(name, false);
+    if (upvalue != -1) {
+        return addUpValue(upvalue, false);
+    }
+
+    return -1;
 }
 
 Value Compiler::makeFunction(ObjFunction* function)
@@ -699,9 +737,6 @@ uint8_t Compiler::argumentList()
     if (!check(Tokentype::RIGHTPEREN)) {
         do {
             expression();
-            if (argCount == 255) {
-                error("Can't have more than 255 arguments.");
-            }
             argCount++;
         } while (match(Tokentype::COMMA));
     }
@@ -893,6 +928,9 @@ void Compiler::namedVariable(const Token& name, const bool canAssign)
     if (arg != -1) {
         getOp = cast(OP_CODE::GET_LOCAL);
         setOp = cast(OP_CODE::SET_LOCAL);
+    } else if ((arg = resolveUpValue(name)) != -1) {
+        getOp = cast(OP_CODE::GET_UPVALUE);
+        setOp = cast(OP_CODE::SET_UPVALUE);
     } else {
         arg = identifierConstant(name);
         getOp = cast(OP_CODE::GET_GLOBAL);

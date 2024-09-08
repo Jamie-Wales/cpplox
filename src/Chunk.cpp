@@ -1,5 +1,6 @@
 #include "Chunk.h"
 #include "Instructions.h"
+#include "Object.h"
 #include <format>
 #include <iostream>
 #include <string>
@@ -50,10 +51,23 @@ void Chunk::writeChunk(const uint8_t byte, int line)
 
 int Chunk::disassembleInstruction(int offset) const
 {
-    uint8_t instruction = code[offset];
+    uint8_t instruction = code[offset++];
     std::cout << std::format("{:04d} ", offset);
     printLineNumber(offset);
     switch (instruction) {
+    case cast(OP_CODE::CLOSURE): {
+        auto str = std::format("{:<16} {:>4}", "CLOSURE", code[offset++]);
+        auto val = pool[offset];
+        std::cout << str << val.to_string() << std::endl;
+        for (size_t i = 0; i < val.asFunc()->upValueCount; i++) {
+            int isLocal = code[offset++];
+            int index = code[offset++];
+            auto str = std::format("{:4d}|                     %s %d",
+                offset - 2, isLocal ? "local" : "upvalue", index);
+        }
+
+        return offset;
+    }
     case cast(OP_CODE::RETURN):
         return simpleInstruction("OP_RETURN", offset);
     case cast(OP_CODE::CONSTANT):
@@ -112,6 +126,10 @@ int Chunk::disassembleInstruction(int offset) const
         return simpleInstruction("OP_DUP", offset);
     case cast(OP_CODE::CALL):
         return byteInstruction("OP_CALL", offset);
+    case cast(OP_CODE::GET_UPVALUE):
+        return byteInstruction("GET_UP_VALUE", offset);
+    case cast(OP_CODE::SET_UPVALUE):
+        return byteInstruction("SET_UP_VALUE", offset);
     default:
         std::cout << std::format("Unknown opcode {}\n", instruction);
         return offset + 1;

@@ -22,6 +22,10 @@ std::string Obj::to_string() const
                           },
                           [](const ObjNative&) -> std::string {
                               return "<native fn>";
-                          } },
+                          },
+                          [](const ObjClosure& c) -> std::string {
+                              return std::format("<function {}>", c.pFunction->name);
+                          },
+                      },
         as);
 }

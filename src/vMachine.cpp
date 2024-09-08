@@ -1,13 +1,15 @@
 #include "vMachine.h"
 #include "Instructions.h"
 #include "Object.h"
-#include "StringInterner.h"
+#include "Stringinterner.h"
 #include "Visit.h"
 #include <cstdint>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <variant>
+#define DEBUG_TRACE_EXECUTION
 size_t& vMachine::ip()
 {
     return frames.back().ip;
@@ -117,6 +119,13 @@ void vMachine::run()
                 if (!callValue(stack[stack.size() - 1 - argCount - offset()], argCount)) {
                     return;
                 }
+                break;
+            }
+            case cast(OP_CODE::CLOSURE): {
+                Value funcAsValue = readConstant();
+                auto function = funcAsValue.asFunc();
+                ObjClosure* cloj = new ObjClosure { function };
+                stack.emplace_back(cloj);
                 break;
             }
             case cast(OP_CODE::NIL): {
@@ -251,17 +260,21 @@ void vMachine::run()
                 if (!stack.back().isTruthy()) {
                     ip() += offset;
                 }
-            } break;
+                break;
+            }
             case cast(OP_CODE::JUMP): {
                 int offset = readShort();
                 ip() += offset;
-            } break;
+                break;
+            }
             case cast(OP_CODE::SWAP): {
                 swap();
-            } break;
+                break;
+            }
             case cast(OP_CODE::DUP): {
                 dup();
-            } break;
+                break;
+            }
             default:
                 throw std::runtime_error(std::format("Unknown opcode: {}", static_cast<int>(byte)));
             }
@@ -405,6 +418,11 @@ bool vMachine::callValue(Value callee, int argCount)
                               return std::visit(overloaded {
                                                     [this, argCount](ObjFunction& func) -> bool {
                                                         call(&func, argCount);
+                                                        return true;
+                                                    },
+
+                                                    [this, argCount](ObjClosure& func) -> bool {
+                                                        call(func.pFunction, argCount);
                                                         return true;
                                                     },
                                                     [this, argCount](ObjNative& native) -> bool {

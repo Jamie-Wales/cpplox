@@ -30,7 +30,10 @@ enum class OP_CODE {
     JUMP_IF_FALSE,
     JUMP,
     LOOP,
-    CALL
+    CALL,
+    CLOSURE,
+    GET_UPVALUE,
+    SET_UPVALUE,
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

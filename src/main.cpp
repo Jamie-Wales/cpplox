@@ -38,6 +38,7 @@ void repl()
         std::cout << "> ";
         if (!std::getline(std::cin, line)) {
             std::cout << '\n';
+
             break;
         }
         if (line == "exit") {

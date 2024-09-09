@@ -24,7 +24,7 @@ std::string Obj::to_string() const
                               return "<native fn>";
                           },
                           [](const ObjClosure& c) -> std::string {
-                              return std::format("<closure function {}>", c.pFunction->name);
+                              return std::format("<closure {}>", c.pFunction->name);
                           },
                           [](const ObjUpvalue& u) -> std::string {
                               return std::format("<up value {}>", u.location->to_string());

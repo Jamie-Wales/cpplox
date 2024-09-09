@@ -9,7 +9,6 @@ include_directories(include)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-add_executable(vm ${SOURCES}
-        src/Compiler.cpp)
+add_executable(vm ${SOURCES})
 
 add_compile_options(-Wall -Wextra -Wpedantic)

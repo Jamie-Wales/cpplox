@@ -173,12 +173,13 @@ void Compiler::addLocal(const Token& name)
     locals.push_back(Local { name, -1, isConst });
 }
 
-int Compiler::resolveLocal(const Token& name, bool scoped = true)
+int Compiler::resolveLocal(const Token& name, bool currentScopeOnly = false)
 {
-    for (int i = locals.size() - 1; i > -1; i--) {
+    for (int i = locals.size() - 1; i >= 0; i--) {
         auto& [token, scopeDepth, isConst] = locals[i];
-        if (scoped && scopeDepth != scope)
-            return -1;
+        if (currentScopeOnly && scopeDepth != scope) {
+            break;
+        }
         if (name.lexeme == token.lexeme) {
             if (scopeDepth == -1) {
                 error("Can't read local variable in its own initializer.");
@@ -308,7 +309,7 @@ int Compiler::resolveUpValue(const Token& name)
         return addUpValue(local, true);
     }
 
-    int upvalue = resolveLocal(name, false);
+    int upvalue = resolveUpValue(name);
     if (upvalue != -1) {
         return addUpValue(upvalue, false);
     }
@@ -319,7 +320,7 @@ int Compiler::resolveUpValue(const Token& name)
 Value Compiler::makeFunction(ObjFunction* function)
 {
     function->upValueCount = upvalues.size();
-    return Value(new Obj(ObjFunction(*function)));
+    return {new Obj(ObjFunction(*function))};
 }
 ObjFunction* Compiler::currentFunction()
 {

@@ -54,19 +54,16 @@ struct ObjInstance {
 struct ObjClosure {
     ObjFunction* pFunction;
     std::vector<ObjUpvalue*> upValues;
+    size_t size = 0;
 
-    ObjClosure(ObjFunction* pFunction)
+    explicit ObjClosure(ObjFunction* pFunction)
     {
+        this->pFunction = pFunction;
         upValues = {};
         upValues.reserve(pFunction->upValueCount);
+        size = pFunction->upValueCount;
     }
 
-    ~ObjClosure()
-    {
-        for (auto& vals : upValues) {
-            delete vals;
-        }
-    }
 };
 
 class Obj {

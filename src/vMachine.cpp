@@ -18,7 +18,11 @@ size_t& vMachine::ip()
 
 Chunk& vMachine::instructions() const
 {
-    return frames.back().function->chunk;
+    if (frames.back().function != nullptr) {
+        return frames.back().function->chunk;
+    } else {
+        return frames.back().closure->pFunction->chunk;
+    }
 }
 
 void vMachine::runtimeError(const std::string& error)
@@ -101,7 +105,7 @@ size_t vMachine::offset()
 
 ObjUpvalue* captureUpvalue(Value* local)
 {
-    ObjUpvalue* createdUpvalue = new ObjUpvalue { local };
+    auto* createdUpvalue = new ObjUpvalue { local };
     return createdUpvalue;
 }
 
@@ -123,31 +127,31 @@ void vMachine::run()
             switch (byte) {
             case cast(OP_CODE::CALL): {
                 int argCount = readByte();
+
                 if (!callValue(stack[stack.size() - 1 - argCount - offset()], argCount)) {
                     return;
                 }
                 break;
             }
-            case cast(OP_CODE::CLOSURE): {
+                case cast(OP_CODE::CLOSURE): {
                 Value funcAsValue = readConstant();
                 auto function = funcAsValue.asFunc();
-                auto obj = new Obj { ObjClosure { function } };
-                stack.emplace_back(Value { obj });
-                auto clojure = std::get<ObjClosure>(obj->as);
-                for (int i = 0; i < clojure.upValues.size(); i++) {
+                auto closure = new ObjClosure{function};  // Create a new ObjClosure
+                for (int i = 0; i < function->upValueCount; i++) {
                     uint8_t isLocal = readByte();
                     uint8_t index = readByte();
                     if (isLocal) {
-                        clojure.upValues[i] = captureUpvalue(&stack[offset() + index]);
+                        closure->upValues.emplace_back(captureUpvalue(&stack[offset() + index]));
                     } else {
-                        clojure.upValues[i] = clojure.upValues[index];
+                        closure->upValues.emplace_back(frames.back().closure->upValues[index]);
                     }
                 }
+                stack.emplace_back(new Obj{*closure});  // Push the closure onto the stack
                 break;
-            }
+                }
             case cast(OP_CODE::GET_UPVALUE): {
                 uint8_t slot = readByte();
-                stack.push_back(frames.back().closure->upValues[slot]->location);
+                stack.emplace_back(frames.back().closure->upValues[slot]->location);
                 break;
             }
             case cast(OP_CODE::SET_UPVALUE): {
@@ -159,17 +163,18 @@ void vMachine::run()
                 stack.emplace_back(Value { nullptr });
                 break;
             }
-            case cast(OP_CODE::RETURN): {
+                case cast(OP_CODE::RETURN): {
                 Value result = stack.back();
-                stack.resize(frames.back().stackOffset);
+                stack.resize(frames.back().stackOffset);  // This line pops all local variables
                 frames.pop_back();
-                stack.push_back(result);
                 if (frames.empty()) {
                     stack.push_back(result);
                     return;
                 }
                 stack.push_back(result);
-            } break;
+                break;
+                }
+
             case cast(OP_CODE::LOOP): {
                 uint16_t offset = readShort();
                 ip() -= offset;
@@ -410,7 +415,7 @@ void vMachine::lessEqual()
 void vMachine::call(ObjFunction* function, int argCount)
 {
     if (argCount != function->arity) {
-        runtimeError(std::format("Expected {} arguments but got {}.", function->arity, argCount));
+        runtimeError(std::format("Function expected {} arguments but got {}.", function->arity, argCount));
         return;
     }
     if (frames.size() == FRAMES_MAX) {
@@ -421,7 +426,7 @@ void vMachine::call(ObjFunction* function, int argCount)
     CallFrame callFrame {
         function,
         0,
-        stack.size() - argCount - 1,
+        stack.size() - 1 - argCount - 1,
         nullptr
     };
     frames.push_back(callFrame);
@@ -430,7 +435,7 @@ void vMachine::call(ObjFunction* function, int argCount)
 void vMachine::call(ObjClosure* closure, int argCount)
 {
     if (argCount != closure->pFunction->arity) {
-        runtimeError(std::format("Expected {} arguments but got {}.", closure->pFunction->arity, argCount));
+        runtimeError(std::format("Closure expected {} arguments but got {}.", closure->pFunction->arity, argCount));
         return;
     }
     if (frames.size() == FRAMES_MAX) {
@@ -441,7 +446,7 @@ void vMachine::call(ObjClosure* closure, int argCount)
     CallFrame callFrame {
         nullptr,
         0,
-        stack.size() - argCount - 1,
+        stack.size() - 1 - argCount - 1,
         closure
     };
     frames.push_back(callFrame);
@@ -449,13 +454,8 @@ void vMachine::call(ObjClosure* closure, int argCount)
 
 void vMachine::load(ObjFunction* mainFunction)
 {
-    const CallFrame callFrame {
-        mainFunction,
-        0,
-        0,
-    };
 
-    frames.push_back(callFrame);
+    frames.emplace_back(CallFrame { nullptr, 0, 0, new ObjClosure { mainFunction } });
     defineNativeFunctions();
 }
 

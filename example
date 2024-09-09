@@ -1,11 +1,8 @@
 fn outer() {
-  let a = 1;
-  let b = 2;
-  fn middle() {
-    let c = 3;
-    let d = 4;
-    fn inner() {
-      print(a + c + b + d)
-    }
+  let x = "outside";
+  fn inner() {
+    print(x)
   }
+  inner();
 }
+outer();

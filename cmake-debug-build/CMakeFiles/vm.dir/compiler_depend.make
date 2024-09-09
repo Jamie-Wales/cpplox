@@ -5350,7 +5350,7 @@ CMakeFiles/vm.dir/src/Value.cpp.o: /Users/jamie/Dev/vm/cpplox/src/Value.cpp \
   /Users/jamie/Dev/vm/cpplox/include/Chunk.h \
   /Users/jamie/Dev/vm/cpplox/include/Instructions.h \
   /Users/jamie/Dev/vm/cpplox/include/Object.h \
-  /Users/jamie/Dev/vm/cpplox/include/StringInterner.h \
+  /Users/jamie/Dev/vm/cpplox/include/Stringinterner.h \
   /Users/jamie/Dev/vm/cpplox/include/Value.h \
   /Users/jamie/Dev/vm/cpplox/include/Visit.h
 
@@ -6305,7 +6305,7 @@ CMakeFiles/vm.dir/src/main.cpp.o: /Users/jamie/Dev/vm/cpplox/src/main.cpp \
   /Users/jamie/Dev/vm/cpplox/include/Instructions.h \
   /Users/jamie/Dev/vm/cpplox/include/Object.h \
   /Users/jamie/Dev/vm/cpplox/include/Scanner.h \
-  /Users/jamie/Dev/vm/cpplox/include/StringInterner.h \
+  /Users/jamie/Dev/vm/cpplox/include/Stringinterner.h \
   /Users/jamie/Dev/vm/cpplox/include/Token.h \
   /Users/jamie/Dev/vm/cpplox/include/Value.h \
   /Users/jamie/Dev/vm/cpplox/include/stdlibfuncs.h \
@@ -7261,7 +7261,7 @@ CMakeFiles/vm.dir/src/vMachine.cpp.o: /Users/jamie/Dev/vm/cpplox/src/vMachine.cp
   /Users/jamie/Dev/vm/cpplox/include/Chunk.h \
   /Users/jamie/Dev/vm/cpplox/include/Instructions.h \
   /Users/jamie/Dev/vm/cpplox/include/Object.h \
-  /Users/jamie/Dev/vm/cpplox/include/StringInterner.h \
+  /Users/jamie/Dev/vm/cpplox/include/Stringinterner.h \
   /Users/jamie/Dev/vm/cpplox/include/Value.h \
   /Users/jamie/Dev/vm/cpplox/include/Visit.h \
   /Users/jamie/Dev/vm/cpplox/include/stdlibfuncs.h \
@@ -8735,8 +8735,6 @@ CMakeFiles/vm.dir/src/vMachine.cpp.o: /Users/jamie/Dev/vm/cpplox/src/vMachine.cp
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__fwd/streambuf.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__algorithm/pstl_merge.h:
-
-/Users/jamie/Dev/vm/cpplox/include/StringInterner.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__algorithm/pstl_copy.h:
 

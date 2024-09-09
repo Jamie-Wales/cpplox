@@ -261,13 +261,16 @@ void Compiler::function(FunctionType type)
     beginScope();
     pushFunction(previous);
     consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
+
+    int arity = 0;
     if (!check(Tokentype::RIGHTPEREN)) {
         do {
-            currentFunction()->arity++;
+            arity++;
             uint8_t paramConstant = parseVariable("Expect parameter name.");
             defineVariable(paramConstant);
         } while (match(Tokentype::COMMA));
     }
+    currentFunction()->arity = arity;
     consume(Tokentype::RIGHTPEREN, "Expect ')' after parameters.");
     consume(Tokentype::LEFTBRACE, "Expect '{' before function body.");
     block();
@@ -315,6 +318,7 @@ int Compiler::resolveUpValue(const Token& name)
 
 Value Compiler::makeFunction(ObjFunction* function)
 {
+    function->upValueCount = upvalues.size();
     return Value(new Obj(ObjFunction(*function)));
 }
 ObjFunction* Compiler::currentFunction()

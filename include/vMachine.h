@@ -12,12 +12,14 @@ struct CallFrame {
         function;
     size_t ip;
     size_t stackOffset;
+    ObjClosure* closure;
 };
 
 class vMachine {
 public:
     std::vector<CallFrame> frames;
     void call(ObjFunction* function, int argCount);
+    void call(ObjClosure* closure, int argCount);
     bool callValue(Value callee, int argCount);
     explicit vMachine()
         : globals {}

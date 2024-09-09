@@ -4,6 +4,7 @@
 #include "Stringinterner.h"
 #include "Visit.h"
 #include <cstdint>
+#include <ctime>
 #include <format>
 #include <iostream>
 #include <ostream>
@@ -98,6 +99,12 @@ size_t vMachine::offset()
     return frame().stackOffset;
 }
 
+ObjUpvalue* captureUpvalue(Value* local)
+{
+    ObjUpvalue* createdUpvalue = new ObjUpvalue { local };
+    return createdUpvalue;
+}
+
 void vMachine::run()
 {
     try {
@@ -124,8 +131,28 @@ void vMachine::run()
             case cast(OP_CODE::CLOSURE): {
                 Value funcAsValue = readConstant();
                 auto function = funcAsValue.asFunc();
-                ObjClosure* cloj = new ObjClosure { function };
-                stack.emplace_back(cloj);
+                auto obj = new Obj { ObjClosure { function } };
+                stack.emplace_back(Value { obj });
+                auto clojure = std::get<ObjClosure>(obj->as);
+                for (int i = 0; i < clojure.upValues.size(); i++) {
+                    uint8_t isLocal = readByte();
+                    uint8_t index = readByte();
+                    if (isLocal) {
+                        clojure.upValues[i] = captureUpvalue(&stack[offset() + index]);
+                    } else {
+                        clojure.upValues[i] = clojure.upValues[index];
+                    }
+                }
+                break;
+            }
+            case cast(OP_CODE::GET_UPVALUE): {
+                uint8_t slot = readByte();
+                stack.push_back(frames.back().closure->upValues[slot]->location);
+                break;
+            }
+            case cast(OP_CODE::SET_UPVALUE): {
+                uint8_t slot = readByte();
+                frames.back().closure->upValues[slot]->location = &stack.back();
                 break;
             }
             case cast(OP_CODE::NIL): {
@@ -395,6 +422,27 @@ void vMachine::call(ObjFunction* function, int argCount)
         function,
         0,
         stack.size() - argCount - 1,
+        nullptr
+    };
+    frames.push_back(callFrame);
+}
+
+void vMachine::call(ObjClosure* closure, int argCount)
+{
+    if (argCount != closure->pFunction->arity) {
+        runtimeError(std::format("Expected {} arguments but got {}.", closure->pFunction->arity, argCount));
+        return;
+    }
+    if (frames.size() == FRAMES_MAX) {
+        runtimeError("Stack overflow.");
+        return;
+    }
+
+    CallFrame callFrame {
+        nullptr,
+        0,
+        stack.size() - argCount - 1,
+        closure
     };
     frames.push_back(callFrame);
 }
@@ -421,8 +469,8 @@ bool vMachine::callValue(Value callee, int argCount)
                                                         return true;
                                                     },
 
-                                                    [this, argCount](ObjClosure& func) -> bool {
-                                                        call(func.pFunction, argCount);
+                                                    [this, argCount](ObjClosure& cloj) -> bool {
+                                                        call(&cloj, argCount);
                                                         return true;
                                                     },
                                                     [this, argCount](ObjNative& native) -> bool {
@@ -439,7 +487,7 @@ bool vMachine::callValue(Value callee, int argCount)
                                   obj->as);
                           },
                           [this](const auto& b) -> bool {
-                              runtimeError("Not an Object");
+                              runtimeError("Cannot call a non Object");
                               return false;
                           } },
         callee.as);

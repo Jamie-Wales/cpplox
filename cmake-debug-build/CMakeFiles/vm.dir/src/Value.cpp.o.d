@@ -875,7 +875,7 @@ CMakeFiles/vm.dir/src/Value.cpp.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__functional/pointer_to_binary_function.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__functional/pointer_to_unary_function.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__functional/unary_negate.h \
-  /Users/jamie/Dev/vm/cpplox/include/StringInterner.h \
+  /Users/jamie/Dev/vm/cpplox/include/Stringinterner.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/unordered_set \
   /Users/jamie/Dev/vm/cpplox/include/Visit.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/format \

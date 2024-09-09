@@ -32,6 +32,10 @@ struct ObjFunction {
     }
 };
 
+struct ObjUpvalue {
+    Value* location;
+};
+
 class Value;
 
 using NativeFn = std::function<Value(int argCount, Value* args)>;
@@ -49,6 +53,20 @@ struct ObjInstance {
 
 struct ObjClosure {
     ObjFunction* pFunction;
+    std::vector<ObjUpvalue*> upValues;
+
+    ObjClosure(ObjFunction* pFunction)
+    {
+        upValues = {};
+        upValues.reserve(pFunction->upValueCount);
+    }
+
+    ~ObjClosure()
+    {
+        for (auto& vals : upValues) {
+            delete vals;
+        }
+    }
 };
 
 class Obj {

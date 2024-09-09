@@ -56,16 +56,18 @@ int Chunk::disassembleInstruction(int offset) const
     printLineNumber(offset);
     switch (instruction) {
     case cast(OP_CODE::CLOSURE): {
-        auto str = std::format("{:<16} {:>4}", "CLOSURE", code[offset++]);
-        auto val = pool[offset];
-        std::cout << str << val.to_string() << std::endl;
-        for (size_t i = 0; i < val.asFunc()->upValueCount; i++) {
-            int isLocal = code[offset++];
-            int index = code[offset++];
-            auto str = std::format("{:4d}|                     %s %d",
-                offset - 2, isLocal ? "local" : "upvalue", index);
+        uint8_t constant = code[offset++];
+        auto str = std::format("{:<16} {:>4}", "CLOSURE", constant);
+        auto val = pool[constant];
+        std::cout << str << " " << val.to_string() << std::endl;
+        auto func = val.asFunc();
+        std::cout << std::format("         {:<16} {}\n", "upvalue count:", func->upValueCount);
+        for (size_t i = 0; i < func->upValueCount; i++) {
+            uint8_t isLocal = code[offset++];
+            uint8_t index = code[offset++];
+            std::cout << std::format("         {:<16} | {:<7} | {}\n",
+                "", isLocal ? "local" : "upvalue", index);
         }
-
         return offset;
     }
     case cast(OP_CODE::RETURN):

@@ -882,7 +882,7 @@ CMakeFiles/vm.dir/src/main.cpp.o: /Users/jamie/Dev/vm/cpplox/src/main.cpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/deque \
   /Users/jamie/Dev/vm/cpplox/include/vMachine.h \
   /Users/jamie/Dev/vm/cpplox/include/stdlibfuncs.h \
-  /Users/jamie/Dev/vm/cpplox/include/StringInterner.h \
+  /Users/jamie/Dev/vm/cpplox/include/Stringinterner.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iostream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/istream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ostream \

@@ -26,11 +26,10 @@ ObjFunction* Value::asFunc() const
                               if (auto func = std::get_if<ObjFunction>(&obj->as)) {
                                   return func;
                               }
-
-                              throw std::runtime_error { "Not a function" };
+                              throw std::runtime_error { std::format("Object cannot be converted to function because {} is not a function", obj->to_string()) };
                           },
                           [](auto) -> ObjFunction* {
-                              throw std::runtime_error { "Not a function" };
+                              throw std::runtime_error { "Value cannot be converted to function as value is not an object" };
                           } },
         as);
 }

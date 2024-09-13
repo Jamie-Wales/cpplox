@@ -25,7 +25,6 @@ int Chunk::writeConstant(const Value& value, const int line)
         writeChunk((index >> 8) & 0xff, line);
         writeChunk((index >> 16) & 0xff, line);
     }
-
     return index;
 }
 
@@ -40,27 +39,22 @@ int Chunk::disassembleJump(const std::string& name, int sign, int offset) const
 void Chunk::writeChunk(const uint8_t byte, int line)
 {
     code.push_back(byte);
-    if (const auto itr = std::ranges::find_if(lines, [line](const LineInfo& element) {
-            return element.lineNumber == line;
-        });
-        itr == lines.end()) {
-        const size_t size = code.size() - 1;
-        lines.push_back({ static_cast<int>(size), line });
-    }
+    lines.push_back({ static_cast<int>(code.size() - 1), line });
 }
 
 int Chunk::disassembleInstruction(int offset) const
 {
-    uint8_t instruction = code[offset++];
+    uint8_t instruction = code[offset];
     std::cout << std::format("{:04d} ", offset);
     printLineNumber(offset);
     switch (instruction) {
     case cast(OP_CODE::CLOSURE): {
+        offset++;
         uint8_t constant = code[offset++];
-        auto str = std::format("{:<16} {:>4}", "CLOSURE", constant);
-        auto val = pool[constant];
-        std::cout << str << " " << val.to_string() << std::endl;
-        auto func = val.asFunc();
+        std::cout << std::format("{:<16} {:>4}", "CLOSURE", constant);
+        pool[constant].print();
+        std::cout << std::endl;
+        auto func = pool[constant].asFunc();
         std::cout << std::format("         {:<16} {}\n", "upvalue count:", func->upValueCount);
         for (size_t i = 0; i < func->upValueCount; i++) {
             uint8_t isLocal = code[offset++];
@@ -118,6 +112,8 @@ int Chunk::disassembleInstruction(int offset) const
         return byteInstruction("OP_GET_LOCAL", offset);
     case cast(OP_CODE::JUMP):
         return disassembleJump("OP_JUMP", 1, offset);
+    case cast(OP_CODE::CLOSE_UPVALUE):
+        return simpleInstruction("CLOSE_UPVALUE", offset);
     case cast(OP_CODE::JUMP_IF_FALSE):
         return disassembleJump("OP_JUMP_IF_FALSE", 1, offset);
     case cast(OP_CODE::LOOP):
@@ -147,19 +143,17 @@ int Chunk::byteInstruction(const std::string& name, const int offset) const
 
 void Chunk::printLineNumber(const int offset) const
 {
-    for (const auto& [os, lineNumber] : lines) {
-        if (offset == os) {
-            std::cout << std::format("{:4d} ", lineNumber);
-            return;
-        }
+    if (offset > 0 && lines[offset].lineNumber == lines[offset - 1].lineNumber) {
+        std::cout << "   | ";
+    } else {
+        std::cout << std::format("{:4d} ", lines[offset].lineNumber);
     }
-    std::cout << "   | ";
 }
 
 int Chunk::constantInstruction(const std::string& name, const int offset) const
 {
     uint8_t constant = code[offset + 1];
-    std::cout << std::format("{:<8} {:4d} '", name, constant);
+    std::cout << std::format("{:<16} {:4d} '", name, constant);
     pool[constant].print();
     std::cout << "'\n";
     return offset + 2;
@@ -168,7 +162,7 @@ int Chunk::constantInstruction(const std::string& name, const int offset) const
 int Chunk::constantLongInstruction(const std::string& name, int offset) const
 {
     uint32_t constant = code[offset + 1] | (code[offset + 2] << 8) | (code[offset + 3] << 16);
-    std::cout << std::format("{:<8} {:8d} '", name, constant);
+    std::cout << std::format("{:<16} {:8d} '", name, constant);
     pool[constant].print();
     std::cout << "'\n";
     return offset + 4;

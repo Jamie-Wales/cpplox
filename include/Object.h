@@ -34,6 +34,8 @@ struct ObjFunction {
 
 struct ObjUpvalue {
     Value* location;
+    ObjUpvalue* next;
+    Value closed;
 };
 
 class Value;
@@ -63,7 +65,6 @@ struct ObjClosure {
         upValues.reserve(pFunction->upValueCount);
         size = pFunction->upValueCount;
     }
-
 };
 
 class Obj {

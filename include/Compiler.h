@@ -24,14 +24,11 @@ enum class Precedence {
     PRIMARY
 };
 
-enum class FunctionType {
-    FUNCTION
-};
-
 struct Local {
     Token token;
     int scopeDepth;
     bool isConst;
+    bool isCaptured;
 };
 
 class Compiler {
@@ -42,7 +39,7 @@ public:
     {
         initRules();
         pushFunction({ Tokentype::IDENTIFIER, "main", 0, 0 });
-        locals = {};
+        locals = { { { Tokentype::IDENTIFIER, "main", 0, 0 }, -1, true, false } };
     }
     std::optional<ObjFunction*> compile();
 
@@ -138,7 +135,7 @@ private:
     void addLocal(const Token& name);
     void forStatement();
     void funDeclaration();
-    void function(FunctionType ft);
+    void function();
     uint8_t argumentList();
     void call(bool canAssign);
     void returnStatement();

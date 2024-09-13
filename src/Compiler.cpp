@@ -150,7 +150,7 @@ void Compiler::declareVariable()
 
     const Token name = previous;
     for (int i = locals.size() - 1; i > -1; i--) {
-        const auto& [token, scopeDepth, isConst] = locals[i];
+        const auto& [token, scopeDepth, isConst, isCaptured] = locals[i];
         if (scopeDepth != -1 && scopeDepth < scope) {
             break;
         }
@@ -176,7 +176,7 @@ void Compiler::addLocal(const Token& name)
 int Compiler::resolveLocal(const Token& name, bool currentScopeOnly = false)
 {
     for (int i = locals.size() - 1; i >= 0; i--) {
-        auto& [token, scopeDepth, isConst] = locals[i];
+        auto& [token, scopeDepth, isConst, isCaptured] = locals[i];
         if (currentScopeOnly && scopeDepth != scope) {
             break;
         }
@@ -252,11 +252,11 @@ void Compiler::funDeclaration()
 {
     uint8_t global = parseVariable("Expect function name.");
     markInitialized();
-    function(FunctionType::FUNCTION);
+    function();
     defineVariable(global);
 }
 
-void Compiler::function(FunctionType type)
+void Compiler::function()
 {
 
     beginScope();
@@ -320,7 +320,7 @@ int Compiler::resolveUpValue(const Token& name)
 Value Compiler::makeFunction(ObjFunction* function)
 {
     function->upValueCount = upvalues.size();
-    return {new Obj(ObjFunction(*function))};
+    return { new Obj(ObjFunction(*function)) };
 }
 ObjFunction* Compiler::currentFunction()
 {

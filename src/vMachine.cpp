@@ -83,6 +83,15 @@ uint8_t vMachine::readByte()
 {
     return instructions().code[ip()++];
 }
+void vMachine::closeUpvalues(Value* last)
+{
+    while (openUpvalues != nullptr && openUpvalues->location >= last) {
+        ObjUpvalue* upvalue = openUpvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        openUpvalues = upvalue->next;
+    }
+}
 
 void vMachine::execute()
 {
@@ -103,9 +112,28 @@ size_t vMachine::offset()
     return frame().stackOffset;
 }
 
-ObjUpvalue* captureUpvalue(Value* local)
+ObjUpvalue* vMachine::captureUpvalue(Value* local)
 {
+
+    ObjUpvalue* prevUpvalue = nullptr;
+    ObjUpvalue* upvalue = this->openUpvalues;
+    while (upvalue != nullptr && upvalue->location > local) {
+        prevUpvalue = upvalue;
+        upvalue = upvalue->next;
+    }
+
+    if (upvalue != NULL && upvalue->location == local) {
+        return upvalue;
+    }
     auto* createdUpvalue = new ObjUpvalue { local };
+
+    createdUpvalue->next = upvalue;
+
+    if (prevUpvalue == nullptr) {
+        openUpvalues = createdUpvalue;
+    } else {
+        prevUpvalue->next = createdUpvalue;
+    }
     return createdUpvalue;
 }
 
@@ -133,10 +161,10 @@ void vMachine::run()
                 }
                 break;
             }
-                case cast(OP_CODE::CLOSURE): {
+            case cast(OP_CODE::CLOSURE): {
                 Value funcAsValue = readConstant();
                 auto function = funcAsValue.asFunc();
-                auto closure = new ObjClosure{function};  // Create a new ObjClosure
+                auto closure = new ObjClosure { function }; // Create a new ObjClosure
                 for (int i = 0; i < function->upValueCount; i++) {
                     uint8_t isLocal = readByte();
                     uint8_t index = readByte();
@@ -146,9 +174,9 @@ void vMachine::run()
                         closure->upValues.emplace_back(frames.back().closure->upValues[index]);
                     }
                 }
-                stack.emplace_back(new Obj{*closure});  // Push the closure onto the stack
+                stack.emplace_back(new Obj { *closure }); // Push the closure onto the stack
                 break;
-                }
+            }
             case cast(OP_CODE::GET_UPVALUE): {
                 uint8_t slot = readByte();
                 stack.emplace_back(frames.back().closure->upValues[slot]->location);
@@ -163,9 +191,10 @@ void vMachine::run()
                 stack.emplace_back(Value { nullptr });
                 break;
             }
-                case cast(OP_CODE::RETURN): {
+            case cast(OP_CODE::RETURN): {
                 Value result = stack.back();
-                stack.resize(frames.back().stackOffset);  // This line pops all local variables
+                stack.resize(frames.back().stackOffset);
+                closeUpvalues(&stack[frames.back().stackOffset - 1]);
                 frames.pop_back();
                 if (frames.empty()) {
                     stack.push_back(result);
@@ -173,7 +202,7 @@ void vMachine::run()
                 }
                 stack.push_back(result);
                 break;
-                }
+            }
 
             case cast(OP_CODE::LOOP): {
                 uint16_t offset = readShort();
@@ -285,6 +314,10 @@ void vMachine::run()
             case cast(OP_CODE::EQUAL):
                 ensureStackSize(2, "EQUAL");
                 equal();
+                break;
+            case cast(OP_CODE::CLOSE_UPVALUE):
+                closeUpvalues(&stack.back());
+                stack.pop_back();
                 break;
             case cast(OP_CODE::JUMP_IF_FALSE): {
                 ensureStackSize(1, "JUMP_IF_FALSE");

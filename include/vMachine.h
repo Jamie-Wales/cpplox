@@ -2,6 +2,7 @@
 #include "Chunk.h"
 #include "Object.h"
 #include "stdlibfuncs.h"
+#include <cstddef>
 #include <cstdint>
 #include <unordered_map>
 enum class vState { OK,
@@ -21,10 +22,18 @@ public:
     void call(ObjFunction* function, int argCount);
     void call(ObjClosure* closure, int argCount);
     bool callValue(Value callee, int argCount);
+
+    void closeUpvalues(Value* last);
+
+    ObjUpvalue* captureUpvalue(Value* local);
+
+    ObjUpvalue* openUpvalues;
     explicit vMachine()
         : globals {}
         , stack {}
     {
+
+        openUpvalues = nullptr;
     }
 
     vMachine(vMachine&&) = default;

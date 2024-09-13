@@ -1,8 +1,23 @@
-fn outer() {
-  let x = "outside";
-  fn inner() {
-    print(x)
+let f;
+let g;
+
+{
+  let local = "local";
+  fn ff() {
+    print(local)
+    local = "after f";
+    print(local)
   }
-  inner();
+  f = ff;
+
+  fn gg() {
+    print(local)
+    local = "after g";
+    print(local)
+  }
+  g = gg;
 }
-outer();
+
+f();
+
+g();

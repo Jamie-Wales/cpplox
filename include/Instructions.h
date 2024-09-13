@@ -34,6 +34,7 @@ enum class OP_CODE {
     CLOSURE,
     GET_UPVALUE,
     SET_UPVALUE,
+    CLOSE_UPVALUE
 };
 
 constexpr inline uint8_t cast(OP_CODE code)

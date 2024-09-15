@@ -5,11 +5,9 @@
 #include <string>
 #include <vector>
 
-using regex = std::regex;
-
 class Scanner {
 public:
-    Scanner(const std::string& input)
+    explicit Scanner(const std::string& input)
         : input(input)
     {
     }

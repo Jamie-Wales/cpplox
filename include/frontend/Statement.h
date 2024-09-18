@@ -1,13 +1,19 @@
 #pragma once
 #include "Expression.h"
+#include <memory>
+#include <variant>
+#include <vector>
 
 class Statement;
 
 class ExpressionStatement {
 public:
     std::unique_ptr<Expression> expression;
-    ExpressionStatement(std::unique_ptr<Expression> expression)
+    int line;
+
+    ExpressionStatement(std::unique_ptr<Expression> expression, int line)
         : expression(std::move(expression))
+        , line(line)
     {
     }
 };
@@ -15,9 +21,11 @@ public:
 class PrintStatement {
 public:
     std::unique_ptr<Expression> expression;
+    int line;
 
-    PrintStatement(std::unique_ptr<Expression> expression)
+    PrintStatement(std::unique_ptr<Expression> expression, int line)
         : expression(std::move(expression))
+        , line(line)
     {
     }
 };
@@ -27,11 +35,13 @@ public:
     Token name;
     std::unique_ptr<Expression> initializer;
     bool isConst;
+    int line;
 
-    VariableDeclaration(const Token& name, std::unique_ptr<Expression> initializer, bool isConst)
+    VariableDeclaration(const Token& name, std::unique_ptr<Expression> initializer, bool isConst, int line)
         : name(name)
         , initializer(std::move(initializer))
         , isConst(isConst)
+        , line(line)
     {
     }
 };
@@ -39,9 +49,11 @@ public:
 class BlockStatement {
 public:
     std::vector<std::unique_ptr<Statement>> statements;
+    int line;
 
-    BlockStatement(std::vector<std::unique_ptr<Statement>> statements)
+    BlockStatement(std::vector<std::unique_ptr<Statement>> statements, int line)
         : statements(std::move(statements))
+        , line(line)
     {
     }
 };
@@ -51,13 +63,16 @@ public:
     std::unique_ptr<Expression> condition;
     std::unique_ptr<Statement> thenBranch;
     std::unique_ptr<Statement> elseBranch;
+    int line;
 
     IfStatement(std::unique_ptr<Expression> condition,
         std::unique_ptr<Statement> thenBranch,
-        std::unique_ptr<Statement> elseBranch)
+        std::unique_ptr<Statement> elseBranch,
+        int line)
         : condition(std::move(condition))
         , thenBranch(std::move(thenBranch))
         , elseBranch(std::move(elseBranch))
+        , line(line)
     {
     }
 };
@@ -66,10 +81,12 @@ class WhileStatement {
 public:
     std::unique_ptr<Expression> condition;
     std::unique_ptr<Statement> body;
+    int line;
 
-    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> body)
+    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> body, int line)
         : condition(std::move(condition))
         , body(std::move(body))
+        , line(line)
     {
     }
 };
@@ -80,15 +97,18 @@ public:
     std::unique_ptr<Expression> condition;
     std::unique_ptr<Expression> increment;
     std::unique_ptr<Statement> body;
+    int line;
 
     ForStatement(std::unique_ptr<Statement> initializer,
         std::unique_ptr<Expression> condition,
         std::unique_ptr<Expression> increment,
-        std::unique_ptr<Statement> body)
+        std::unique_ptr<Statement> body,
+        int line)
         : initializer(std::move(initializer))
         , condition(std::move(condition))
         , increment(std::move(increment))
         , body(std::move(body))
+        , line(line)
     {
     }
 };
@@ -97,10 +117,12 @@ class ReturnStatement {
 public:
     Token keyword;
     std::unique_ptr<Expression> value;
+    int line;
 
-    ReturnStatement(const Token& keyword, std::unique_ptr<Expression> value)
+    ReturnStatement(const Token& keyword, std::unique_ptr<Expression> value, int line)
         : keyword(keyword)
         , value(std::move(value))
+        , line(line)
     {
     }
 };
@@ -108,8 +130,11 @@ public:
 class BreakStatement {
 public:
     Token keyword;
-    BreakStatement(const Token& keyword)
+    int line;
+
+    BreakStatement(const Token& keyword, int line)
         : keyword(keyword)
+        , line(line)
     {
     }
 };
@@ -117,8 +142,11 @@ public:
 class ContinueStatement {
 public:
     Token keyword;
-    ContinueStatement(const Token& keyword)
+    int line;
+
+    ContinueStatement(const Token& keyword, int line)
         : keyword(keyword)
+        , line(line)
     {
     }
 };
@@ -128,10 +156,13 @@ public:
     const Token name;
     std::vector<Token> parameters;
     std::unique_ptr<Statement> body;
-    FunctionDeclaration(const Token& name, std::vector<Token> parameters, std::unique_ptr<Statement> body)
+    int line;
+
+    FunctionDeclaration(const Token& name, std::vector<Token> parameters, std::unique_ptr<Statement> body, int line)
         : name(name)
         , parameters(std::move(parameters))
         , body(std::move(body))
+        , line(line)
     {
     }
 };
@@ -141,12 +172,16 @@ public:
     std::unique_ptr<Expression> expression;
     std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Statement>>> cases;
     std::unique_ptr<Statement> defaultCase;
+    int line;
+
     SwitchStatement(std::unique_ptr<Expression> expression,
         std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Statement>>> cases,
-        std::unique_ptr<Statement> defaultCase)
+        std::unique_ptr<Statement> defaultCase,
+        int line)
         : expression(std::move(expression))
         , cases(std::move(cases))
         , defaultCase(std::move(defaultCase))
+        , line(line)
     {
     }
 };
@@ -154,6 +189,9 @@ public:
 class Statement {
 public:
     std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as;
+
     Statement(std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as)
-        : as { std::move(as) } {};
+        : as { std::move(as) }
+    {
+    }
 };

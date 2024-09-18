@@ -62,7 +62,7 @@ private:
     bool check(Tokentype type) const;
     Token peek() const;
     Token previous;
-    Token& previousToken();
+    Token previousToken();
     void synchronize();
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Statement> statement();

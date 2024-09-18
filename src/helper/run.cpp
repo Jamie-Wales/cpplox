@@ -1,12 +1,14 @@
 #include "run.h"
-#include "Object.h"
+#include "ByteCompiler.h"
 #include "Parser.h"
 #include "Printer.h"
 #include "Scanner.h"
+#include "Statement.h"
 #include "vMachine.h"
 #include <fstream>
 #include <iostream>
 #include <string>
+
 std::string readFile(const std::string& path)
 {
     std::ifstream inputFileStream(path);
@@ -22,11 +24,11 @@ void runFile(const std::string& path)
     Scanner scanner { source };
     auto tokens = scanner.tokenize();
     Parser parser { tokens };
-    auto program = parser.parseProgram();
-    Printer pr {};
-    for (auto& st : program) {
-        pr.print(*st);
-    }
+    std::vector<std::unique_ptr<Statement>> statments = parser.parseProgram();
+    ByteCompiler bc {};
+    auto main = bc.compile(statments);
+    vm.load(main);
+    vm.run();
     // Compiler compiler { tokens };
     // if (std::optional<ObjFunction*> main = compiler.compile()) {
     //     vm.load(*main);

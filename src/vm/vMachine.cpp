@@ -164,7 +164,7 @@ void vMachine::run()
             case cast(OP_CODE::CLOSURE): {
                 Value funcAsValue = readConstant();
                 auto function = funcAsValue.asFunc();
-                auto closure = new ObjClosure { function }; // Create a new ObjClosure
+                auto closure = new ObjClosure { function };
                 for (int i = 0; i < function->upValueCount; i++) {
                     uint8_t isLocal = readByte();
                     uint8_t index = readByte();
@@ -174,7 +174,7 @@ void vMachine::run()
                         closure->upValues.emplace_back(frames.back().closure->upValues[index]);
                     }
                 }
-                stack.emplace_back(new Obj { *closure }); // Push the closure onto the stack
+                stack.emplace_back(new Obj { *closure });
                 break;
             }
             case cast(OP_CODE::GET_UPVALUE): {

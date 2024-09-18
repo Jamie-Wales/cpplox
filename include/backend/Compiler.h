@@ -10,6 +10,13 @@
 #include <unordered_set>
 #include <vector>
 
+struct Local {
+    Token token;
+    int scopeDepth;
+    bool isConst;
+    bool isCaptured;
+};
+
 enum class Precedence {
     NONE,
     ASSIGNMENT,
@@ -24,13 +31,6 @@ enum class Precedence {
     PRIMARY
 };
 
-struct Local {
-    Token token;
-    int scopeDepth;
-    bool isConst;
-    bool isCaptured;
-};
-
 class Compiler {
 public:
     explicit Compiler(const std::vector<Token>& tokens)
@@ -39,7 +39,6 @@ public:
     {
         initRules();
         pushFunction({ Tokentype::IDENTIFIER, "main", 0, 0 });
-        locals = { { { Tokentype::IDENTIFIER, "main", 0, 0 }, -1, true, false } };
     }
     std::optional<ObjFunction*> compile();
 

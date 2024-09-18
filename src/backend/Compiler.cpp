@@ -259,7 +259,6 @@ void Compiler::funDeclaration()
 
 void Compiler::function()
 {
-
     beginScope();
     pushFunction(previous);
     consume(Tokentype::LEFTPEREN, "Expect '(' after function name.");
@@ -278,10 +277,8 @@ void Compiler::function()
     block();
     endScope();
     emitReturn();
-
     const auto func = endCompiler();
     emitBytes(cast(OP_CODE::CLOSURE), emitConstant(makeFunction(func)));
-
     for (int i = 0; i < currentFunction()->upValueCount; i++) {
         emitByte(upvalues[i].isLocal ? 1 : 0);
         emitByte(upvalues[i].index);
@@ -308,19 +305,19 @@ int Compiler::resolveUpValue(const Token& name)
     if (const int local = resolveLocal(name); local != -1) {
         return addUpValue(local, true);
     }
-
     if (const int upvalue = resolveUpValue(name); upvalue != -1) {
         return addUpValue(upvalue, false);
     }
-
     return -1;
 }
 
-Value Compiler::makeFunction(ObjFunction* function) const {
+Value Compiler::makeFunction(ObjFunction* function)
+{
     function->upValueCount = upvalues.size();
     return { new Obj(ObjFunction(*function)) };
 }
-ObjFunction* Compiler::currentFunction() const {
+ObjFunction* Compiler::currentFunction()
+{
     return functions.back();
 }
 

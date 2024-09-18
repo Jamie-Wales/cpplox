@@ -105,11 +105,26 @@ public:
     }
 };
 
+class IncrementExpression {
+public:
+    Token name;
+    std::unique_ptr<Expression> element;
+    Token tokenOperator;
+    bool postFix;
+    IncrementExpression(Token  name, std::unique_ptr<Expression> element, const Token& tokenOperator, bool postFix)
+        : name {std::move( name )}
+        , element { std::move(element) }
+        , tokenOperator { tokenOperator }
+        , postFix { postFix }
+    {
+    }
+};
+
 class Expression {
 public:
-    std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression> as;
+    std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression, IncrementExpression> as;
     int line;
 
-    explicit Expression(std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression> as)
+    explicit Expression(std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression, IncrementExpression> as)
         : as { std::move(as) } {};
 };

@@ -1,6 +1,8 @@
 
 #include "Printer.h"
+#include "Expression.h"
 #include "Visit.h"
+#include <memory>
 #include <ranges>
 #include <variant>
 
@@ -20,6 +22,13 @@ std::string Printer::join_tokens(const std::vector<Token>& tokens) const
         result += token.lexeme;
     }
     return result;
+}
+
+void Printer::print(std::vector<std::unique_ptr<Statement>>& stmt)
+{
+    for (int i = 0; i < stmt.size(); i++) {
+        print(*stmt[i], i);
+    }
 }
 
 void Printer::print(const Expression& expr, size_t depth) const
@@ -50,6 +59,10 @@ void Printer::print(const Expression& expr, size_t depth) const
                        println(depth, "Logical: {}", e.operatorToken.lexeme);
                        print(*e.left, depth + 1);
                        print(*e.right, depth + 1);
+                   },
+
+                   [&](const IncrementExpression& e) {
+                       e.postFix ? println(depth, "{}{}", e.name.lexeme, e.tokenOperator.lexeme) : println(depth, "{}{}", e.tokenOperator.lexeme, e.name.lexeme);
                    },
                    [&](const CallExpression& e) {
                        println(depth, "Call:");

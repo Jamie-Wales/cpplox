@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "Expression.h"
 #include "Statement.h"
+#include "Token.h"
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -13,6 +14,11 @@ void Parser::advance()
     if (current < tokens.size()) {
         current++;
     }
+}
+
+Token Parser::previousToken(int by)
+{
+    return tokens[current - by];
 }
 
 Token Parser::previousToken()
@@ -62,7 +68,8 @@ void Parser::initRules()
     rules[Tokentype::GREATER_EQUAL] = { nullptr, &Parser::binary, nullptr, Precedence::COMPARISON };
     rules[Tokentype::AND] = { nullptr, &Parser::and_, nullptr, Precedence::AND };
     rules[Tokentype::OR] = { nullptr, &Parser::or_, nullptr, Precedence::OR };
-    rules[Tokentype::INCREMENT] = { nullptr, nullptr, &Parser::postfix, Precedence::NONE };
+    rules[Tokentype::INCREMENT] = { &Parser::prefix, nullptr, &Parser::postfix, Precedence::CALL };
+    rules[Tokentype::DECREMENT] = { &Parser::prefix, nullptr, &Parser::postfix, Precedence::CALL };
 }
 
 std::unique_ptr<Expression> Parser::or_(std::unique_ptr<Expression> left, bool canAssign)
@@ -190,11 +197,12 @@ std::unique_ptr<Expression> Parser::parsePrecedence(Precedence precedence)
             break;
         }
     }
-
+    if (const InfixFn postfixRule = getRule(previous.type).postfix; postfixRule != nullptr) {
+        left = (this->*postfixRule)(std::move(left), canAssign);
+    }
     if (canAssign && match(Tokentype::EQUAL)) {
         error("Invalid assignment target.");
     }
-
     return left;
 }
 
@@ -231,15 +239,27 @@ std::unique_ptr<Expression> Parser::and_(std::unique_ptr<Expression> left, bool 
 
 std::unique_ptr<Expression> Parser::prefix(bool canAssign)
 {
-    Token operatorToken = previousToken();
-    auto operand = parsePrecedence(Precedence::UNARY);
-    return std::make_unique<Expression>(UnaryExpression { operatorToken, std::move(operand), operatorToken.line });
+    const Token operatorToken = previousToken();
+    if (!check(Tokentype::IDENTIFIER)) {
+        error("Expected variable name after prefix operator.");
+        return nullptr;
+    }
+
+    advance();
+    const Token name = previousToken();
+    return std::make_unique<Expression>(IncrementExpression { name, nullptr, operatorToken, false });
 }
 
 std::unique_ptr<Expression> Parser::postfix(std::unique_ptr<Expression> left, bool canAssign)
 {
-    Token operatorToken = previousToken();
-    return std::make_unique<Expression>(UnaryExpression { operatorToken, std::move(left), operatorToken.line });
+    const Token operatorToken = previousToken();
+    if (left->as.index() != 1) {
+        error("Invalid postfix operation target.");
+        return left;
+    }
+
+    const auto& varExpr = std::get<VariableExpression>(left->as);
+    return std::make_unique<Expression>(IncrementExpression { varExpr.name, std::move(left), operatorToken, true });
 }
 
 std::unique_ptr<Statement> Parser::declaration()
@@ -374,7 +394,7 @@ std::unique_ptr<Statement> Parser::returnStatement()
 
 std::unique_ptr<Statement> Parser::variableDeclaration()
 {
-    const Token type  = previousToken();
+    const Token type = previousToken();
     const bool isConst = type.type == Tokentype::CONST;
     consume(Tokentype::IDENTIFIER, "Expect variable name.");
     const Token& prev = previousToken();

@@ -25,6 +25,8 @@ void runFile(const std::string& path)
     auto tokens = scanner.tokenize();
     Parser parser { tokens };
     std::vector<std::unique_ptr<Statement>> statments = parser.parseProgram();
+    Printer pr;
+    pr.print(statments);
     ByteCompiler bc {};
     auto main = bc.compile(statments);
     vm.load(main);

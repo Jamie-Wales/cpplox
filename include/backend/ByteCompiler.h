@@ -30,7 +30,7 @@ private:
     std::vector<Upvalue> upvalues;
     bool panicMode = false;
 
-    void pushFunction(const Token &name);
+    void pushFunction(const Token& name);
     void compile(Statement& stmt);
     void compile(Expression& expr);
 
@@ -45,9 +45,9 @@ private:
     void compileReturnStatement(const ReturnStatement& r);
     void compileBreakStatement(const BreakStatement& b);
     void compileContinueStatment(const ContinueStatement& c);
-    void compileFunctionDeclaration(const FunctionDeclaration &f);
+    void compileFunctionDeclaration(const FunctionDeclaration& f);
 
-    Value makeFunction(ObjFunction *function) const;
+    Value makeFunction(ObjFunction* function);
 
     void compileSwitchStatement(const SwitchStatement& s);
 
@@ -59,6 +59,7 @@ private:
     void compileAssignment(const AssignmentExpression& a);
     void compileLogical(const LogicalExpression& l);
     void compileCall(const CallExpression& c);
+    void compilePrePostfix(const IncrementExpression& i);
 
     /* ------ Helper functions ------*/
     void function(const FunctionDeclaration& f);
@@ -81,7 +82,7 @@ private:
     int resolveUpvalue(const Token& name);
     int addUpvalue(uint8_t index, bool isLocal);
     [[nodiscard]] Chunk& currentChunk() const;
-    [[nodiscard]] ObjFunction* currentFunction() const;
+    [[nodiscard]] ObjFunction* currentFunction();
     Value makeString(const std::string& s);
     void emitConstant(Value value);
 

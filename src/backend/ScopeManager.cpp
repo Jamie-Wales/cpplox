@@ -21,8 +21,7 @@ void ScopeManager::markInitialized()
     }
 }
 
-void ScopeManager::markInitialized(Variable& variable)
-{
+void ScopeManager::markInitialized(Variable& variable) const {
     if (!scopes.empty() && variable.type == Variable::Type::Local) {
         variable.depth = scopes.size() - 1;
     }

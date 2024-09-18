@@ -7,7 +7,7 @@
 #include "Statement.h"
 #include "Token.h"
 #include "Value.h"
-#include <memory>
+
 #include <vector>
 class ByteCompiler {
 public:
@@ -30,22 +30,25 @@ private:
     std::vector<Upvalue> upvalues;
     bool panicMode = false;
 
-    void pushFunction(const Token name);
+    void pushFunction(const Token &name);
     void compile(Statement& stmt);
     void compile(Expression& expr);
 
     /* ------ Statement compilation functions ------*/
-    void compileExpressionStatement(ExpressionStatement& e);
-    void compilePrintStatment(PrintStatement& p);
+    void compileExpressionStatement(const ExpressionStatement& e);
+    void compilePrintStatment(const PrintStatement& p);
     void compileVariableDeclaration(const VariableDeclaration& v);
-    void compileBlockStatement(BlockStatement& b);
-    void compileIfStatement(IfStatement& i);
-    void compileWhileStatement(WhileStatement& w);
-    void compileForStatement(ForStatement& f);
-    void compileReturnStatement(ReturnStatement& r);
-    void compileBreakStatement(BreakStatement& b);
-    void compileContinueStatment(ContinueStatement& c);
-    void compileFunctionDeclaration(FunctionDeclaration& f);
+    void compileBlockStatement(const BlockStatement& b);
+    void compileIfStatement(const IfStatement& i);
+    void compileWhileStatement(const WhileStatement& w);
+    void compileForStatement(const ForStatement& f);
+    void compileReturnStatement(const ReturnStatement& r);
+    void compileBreakStatement(const BreakStatement& b);
+    void compileContinueStatment(const ContinueStatement& c);
+    void compileFunctionDeclaration(const FunctionDeclaration &f);
+
+    Value makeFunction(ObjFunction *function) const;
+
     void compileSwitchStatement(const SwitchStatement& s);
 
     /* ------ Expression compilation functions ------*/
@@ -58,27 +61,27 @@ private:
     void compileCall(const CallExpression& c);
 
     /* ------ Helper functions ------*/
-    void function(FunctionDeclaration& f);
+    void function(const FunctionDeclaration& f);
     ObjFunction* endCompiler();
-    void emitByte(uint8_t byte);
-    void emitBytes(uint8_t byte1, uint8_t byte2);
+    void emitByte(uint8_t byte) const;
+    void emitBytes(uint8_t byte1, uint8_t byte2) const;
     void emitLoop(int loopStart);
-    int emitJump(uint8_t instruction);
+    [[nodiscard]] int emitJump(uint8_t instruction) const;
     void patchJump(int offset);
-    void emitReturn();
+    void emitReturn() const;
     uint8_t makeConstant(Value value);
     uint8_t identifierConstant(const Token& name);
     void defineVariable(uint8_t global);
     void markInitialized();
-    void markInitialized(ScopeManager::Variable& variable);
+    void markInitialized(ScopeManager::Variable& variable) const;
     void emitGetVariable(const ScopeManager::Variable& var);
     void emitSetVariable(const ScopeManager::Variable& var);
     void beginScope();
     void endScope();
     int resolveUpvalue(const Token& name);
     int addUpvalue(uint8_t index, bool isLocal);
-    Chunk& currentChunk();
-    ObjFunction* currentFunction();
+    [[nodiscard]] Chunk& currentChunk() const;
+    [[nodiscard]] ObjFunction* currentFunction() const;
     Value makeString(const std::string& s);
     void emitConstant(Value value);
 

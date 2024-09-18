@@ -67,7 +67,6 @@ private:
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Statement> statement();
     std::unique_ptr<Statement> declaration();
-    std::unique_ptr<Statement> block();
     std::unique_ptr<Statement> printStatement();
     std::unique_ptr<Statement> expressionStatement();
     std::unique_ptr<Statement> ifStatement();

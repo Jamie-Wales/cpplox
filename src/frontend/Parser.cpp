@@ -247,13 +247,14 @@ std::unique_ptr<Statement> Parser::declaration()
     try {
         if (match(Tokentype::LET) || match(Tokentype::CONST)) {
             return variableDeclaration();
-        } else if (match(Tokentype::FUN)) {
-            return functionDeclaration("function");
-        } else {
-            return statement();
         }
-    } catch (std::exception e) {
+        if (match(Tokentype::FUN)) {
+            return functionDeclaration("function");
+        }
+        return statement();
+    } catch (std::exception& e) {
         synchronize();
+        std::cerr << e.what() << std::endl;
         return nullptr;
     }
 }

@@ -34,7 +34,7 @@ public:
     void exitScope();
     Variable declareVariable(const Token& name, bool isReadOnly);
     void markInitialized();
-    void markInitialized(Variable& variable);
+    void markInitialized(Variable& variable) const;
     std::optional<Variable> resolveVariable(const Token& name);
     bool isGlobal(const std::string& name) const;
 };

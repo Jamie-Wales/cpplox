@@ -12,9 +12,9 @@
 #include <memory>
 #include <stdexcept>
 
-void ByteCompiler::pushFunction(const Token name)
+void ByteCompiler::pushFunction(const Token &name)
 {
-    auto fun = new ObjFunction { name.lexeme, 0, {} };
+    const auto fun = new ObjFunction { name.lexeme, 0, {} };
     functions.push_back(fun);
 }
 
@@ -33,30 +33,30 @@ ObjFunction* ByteCompiler::compile(std::vector<std::unique_ptr<Statement>>& stmt
 void ByteCompiler::compile(Statement& stmt)
 {
     std::visit(overloaded {
-                   [this](ExpressionStatement& e) -> void { compileExpressionStatement(e); },
-                   [this](PrintStatement& p) -> void { compilePrintStatment(p); },
-                   [this](VariableDeclaration& v) -> void { compileVariableDeclaration(v); },
-                   [this](BlockStatement& b) -> void { compileBlockStatement(b); },
-                   [this](IfStatement& i) -> void { compileIfStatement(i); },
-                   [this](WhileStatement& w) -> void { compileWhileStatement(w); },
-                   [this](ForStatement& f) -> void { compileForStatement(f); },
-                   [this](ReturnStatement& r) -> void { compileReturnStatement(r); },
-                   [this](BreakStatement& b) -> void { compileBreakStatement(b); },
-                   [this](ContinueStatement& c) -> void { compileContinueStatment(c); },
-                   [this](FunctionDeclaration& f) -> void { compileFunctionDeclaration(f); },
-                   [this](SwitchStatement& s) -> void { compileSwitchStatement(s); },
-                   [](const auto& undefined) {
+                   [this](const ExpressionStatement& e) -> void { compileExpressionStatement(e); },
+                   [this](const PrintStatement& p) -> void { compilePrintStatment(p); },
+                   [this](const VariableDeclaration& v) -> void { compileVariableDeclaration(v); },
+                   [this](const BlockStatement& b) -> void { compileBlockStatement(b); },
+                   [this](const IfStatement& i) -> void { compileIfStatement(i); },
+                   [this](const WhileStatement& w) -> void { compileWhileStatement(w); },
+                   [this](const ForStatement& f) -> void { compileForStatement(f); },
+                   [this](const ReturnStatement& r) -> void { compileReturnStatement(r); },
+                   [this](const BreakStatement& b) -> void { compileBreakStatement(b); },
+                   [this](const ContinueStatement& c) -> void { compileContinueStatment(c); },
+                   [this](const FunctionDeclaration& f) -> void { compileFunctionDeclaration(f); },
+                   [this](const SwitchStatement& s) -> void { compileSwitchStatement(s); },
+                   [](const auto) {
                        throw std::runtime_error("Undefined Statement");
                    } },
         stmt.as);
 }
 
-void ByteCompiler::compileExpressionStatement(ExpressionStatement& e)
+void ByteCompiler::compileExpressionStatement(const ExpressionStatement& e)
 {
     compile(*e.expression);
 }
 
-void ByteCompiler::compilePrintStatment(PrintStatement& p)
+void ByteCompiler::compilePrintStatment(const PrintStatement& p)
 {
     compile(*p.expression);
     emitByte(cast(OP_CODE::PRINT));
@@ -78,7 +78,7 @@ void ByteCompiler::compileVariableDeclaration(const VariableDeclaration& v)
     }
 }
 
-void ByteCompiler::compileBlockStatement(BlockStatement& b)
+void ByteCompiler::compileBlockStatement(const BlockStatement& b)
 {
     beginScope();
     for (auto& stmt : b.statements) {
@@ -87,15 +87,15 @@ void ByteCompiler::compileBlockStatement(BlockStatement& b)
     endScope();
 }
 
-void ByteCompiler::compileIfStatement(IfStatement& i)
+void ByteCompiler::compileIfStatement(const IfStatement& i)
 {
 
     compile(*i.condition);
-    int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    const int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
     compile(*i.thenBranch);
 
-    int elseJump = emitJump(cast(OP_CODE::JUMP));
+    const int elseJump = emitJump(cast(OP_CODE::JUMP));
 
     patchJump(thenJump);
     emitByte(cast(OP_CODE::POP));
@@ -106,11 +106,11 @@ void ByteCompiler::compileIfStatement(IfStatement& i)
     patchJump(elseJump);
 }
 
-void ByteCompiler::compileWhileStatement(WhileStatement& w)
+void ByteCompiler::compileWhileStatement(const WhileStatement& w)
 {
-    int loopStart = currentChunk().code.size();
+    const int loopStart = currentChunk().code.size();
     compile(*w.condition);
-    int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
+    const int exitJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
     compile(*w.body);
     emitLoop(loopStart);
@@ -118,7 +118,7 @@ void ByteCompiler::compileWhileStatement(WhileStatement& w)
     emitByte(cast(OP_CODE::POP));
 }
 
-void ByteCompiler::compileForStatement(ForStatement& f)
+void ByteCompiler::compileForStatement(const ForStatement& f)
 {
     beginScope();
 
@@ -136,8 +136,8 @@ void ByteCompiler::compileForStatement(ForStatement& f)
     }
 
     if (f.increment) {
-        int bodyJump = emitJump(cast(OP_CODE::JUMP));
-        int incrementStart = currentChunk().code.size();
+        const int bodyJump = emitJump(cast(OP_CODE::JUMP));
+        const int incrementStart = currentChunk().code.size();
         compile(*f.increment);
         emitByte(cast(OP_CODE::POP));
         emitLoop(loopStart);
@@ -156,7 +156,7 @@ void ByteCompiler::compileForStatement(ForStatement& f)
     endScope();
 }
 
-void ByteCompiler::compileReturnStatement(ReturnStatement& r)
+void ByteCompiler::compileReturnStatement(const ReturnStatement& r)
 {
     if (functions.back()->name == "Main") {
         errorAt(r.keyword, "Can't return from top-level code.");
@@ -171,33 +171,35 @@ void ByteCompiler::compileReturnStatement(ReturnStatement& r)
     emitByte(cast(OP_CODE::RETURN));
 }
 
-void ByteCompiler::compileBreakStatement(BreakStatement& br)
+void ByteCompiler::compileBreakStatement(const BreakStatement& br)
 {
     errorAt(br.keyword, "Break can only be used inside a loop");
 }
 
-void ByteCompiler::compileContinueStatment(ContinueStatement& c)
+void ByteCompiler::compileContinueStatment(const ContinueStatement& c)
 {
     errorAt(c.keyword, "Continue can only be used inside a loop");
 }
 
-void ByteCompiler::compileFunctionDeclaration(FunctionDeclaration& f)
+void ByteCompiler::compileFunctionDeclaration(const FunctionDeclaration& f)
 {
-    // Declare the function in the current scope
     auto variable = scopeManager.declareVariable(f.name, false);
     markInitialized(variable);
 
-    // Compile the function
+
     function(f);
 
-    // If it's a global function, emit the bytecode to define it
     if (variable.type == ScopeManager::Variable::Type::Global) {
-        uint8_t global = identifierConstant(f.name);
+        const uint8_t global = identifierConstant(f.name);
         emitBytes(cast(OP_CODE::DEFINE_GLOBAL), global);
     }
 }
+Value ByteCompiler::makeFunction(ObjFunction* function) const {
+    function->upValueCount = upvalues.size();
+    return { new Obj(ObjFunction(*function)) };
+}
 
-void ByteCompiler::function(FunctionDeclaration& f)
+void ByteCompiler::function(const FunctionDeclaration& f)
 {
     pushFunction(f.name);
     beginScope();
@@ -209,7 +211,7 @@ void ByteCompiler::function(FunctionDeclaration& f)
 
     compile(*f.body);
     const auto compiledFunction = endCompiler();
-    emitBytes(cast(OP_CODE::CLOSURE), makeConstant(Value(compiledFunction)));
+    emitBytes(cast(OP_CODE::CLOSURE), makeConstant(makeFunction(compiledFunction)));
 
     for (int i = 0; i < compiledFunction->upValueCount; i++) {
         emitByte(upvalues[i].isLocal ? 1 : 0);
@@ -256,10 +258,10 @@ void ByteCompiler::compile(Expression& expr)
                    [this](const LiteralExpression& l) { compileLiteral(l); },
                    [this](const VariableExpression& v) { compileVariable(v); },
                    [this](const UnaryExpression& u) { compileUnary(u); },
-                   [this](BinaryExpression& b) { compileBinary(b); },
+                   [this](const BinaryExpression& b) { compileBinary(b); },
                    [this](const AssignmentExpression& a) { compileAssignment(a); },
-                   [this](LogicalExpression& lo) { compileLogical(lo); },
-                   [this](CallExpression& c) { compileCall(c); } },
+                   [this](const LogicalExpression& lo) { compileLogical(lo); },
+                   [this](const CallExpression& c) { compileCall(c); } },
         expr.as);
 }
 
@@ -427,13 +429,11 @@ ObjFunction* ByteCompiler::endCompiler()
 
 /* ------ Helper functions ------ */
 
-void ByteCompiler::emitByte(const uint8_t byte)
-{
+void ByteCompiler::emitByte(const uint8_t byte) const {
     currentChunk().writeChunk(byte, 0); // Use 0 as a placeholder for line number, or implement a different line tracking mechanism
 }
 
-void ByteCompiler::emitBytes(const uint8_t byte1, const uint8_t byte2)
-{
+void ByteCompiler::emitBytes(const uint8_t byte1, const uint8_t byte2) const {
     emitByte(byte1);
     emitByte(byte2);
 }
@@ -459,8 +459,7 @@ void ByteCompiler::error(const std::string& message)
     hadError = true;
 }
 
-int ByteCompiler::emitJump(const uint8_t instruction)
-{
+int ByteCompiler::emitJump(const uint8_t instruction) const {
     emitByte(instruction);
     emitByte(0xff);
     emitByte(0xff);
@@ -479,8 +478,7 @@ void ByteCompiler::patchJump(const int offset)
     currentChunk().code[offset + 1] = jump & 0xff;
 }
 
-void ByteCompiler::emitReturn()
-{
+void ByteCompiler::emitReturn() const {
     emitByte(cast(OP_CODE::NIL));
     emitByte(cast(OP_CODE::RETURN));
 }
@@ -532,8 +530,7 @@ void ByteCompiler::markInitialized()
     scopeManager.markInitialized();
 }
 
-void ByteCompiler::markInitialized(ScopeManager::Variable& variable)
-{
+void ByteCompiler::markInitialized(ScopeManager::Variable& variable) const {
     scopeManager.markInitialized(variable);
 }
 
@@ -574,11 +571,12 @@ void ByteCompiler::beginScope()
 
 void ByteCompiler::endScope()
 {
-    scopeManager.exitScope();
-    while (currentChunk().code.size() > scopeManager.scopes.back().variables.size()) {
-        emitByte(cast(OP_CODE::POP));
-        currentChunk().code.pop_back();
+    for (auto&[variables, isClosure] = scopeManager.scopes.back(); const auto& var : variables) {
+        if (var.type == ScopeManager::Variable::Type::Local) {
+            emitByte(cast(OP_CODE::POP));
+        }
     }
+    scopeManager.exitScope();
 }
 
 int ByteCompiler::resolveUpvalue(const Token& name)
@@ -586,11 +584,11 @@ int ByteCompiler::resolveUpvalue(const Token& name)
     if (functions.size() == 1)
         return -1;
 
-    auto variable = scopeManager.resolveVariable(name);
-    if (variable) {
+    if (const auto variable = scopeManager.resolveVariable(name)) {
         if (variable->type == ScopeManager::Variable::Type::Local) {
             return addUpvalue(variable->index, true);
-        } else if (variable->type == ScopeManager::Variable::Type::Upvalue) {
+        }
+        if (variable->type == ScopeManager::Variable::Type::Upvalue) {
             return addUpvalue(variable->index, false);
         }
     }
@@ -602,13 +600,12 @@ int ByteCompiler::resolveUpvalue(const Token& name)
     return -1;
 }
 
-int ByteCompiler::addUpvalue(uint8_t index, bool isLocal)
+int ByteCompiler::addUpvalue(const uint8_t index, const bool isLocal)
 {
     int upvalueCount = currentFunction()->upValueCount;
 
     for (int i = 0; i < upvalueCount; i++) {
-        Upvalue& upvalue = upvalues[i];
-        if (upvalue.index == index && upvalue.isLocal == isLocal) {
+        if (const Upvalue& upvalue = upvalues[i]; upvalue.index == index && upvalue.isLocal == isLocal) {
             return i;
         }
     }
@@ -616,18 +613,16 @@ int ByteCompiler::addUpvalue(uint8_t index, bool isLocal)
     upvalues.push_back({ index, isLocal });
     return currentFunction()->upValueCount++;
 }
-Chunk& ByteCompiler::currentChunk()
-{
+Chunk& ByteCompiler::currentChunk() const {
     return functions.back()->chunk;
 }
 
-ObjFunction* ByteCompiler::currentFunction()
-{
+ObjFunction* ByteCompiler::currentFunction() const {
     return functions.back();
 }
 Value ByteCompiler::makeString(const std::string& s)
 {
     const std::string* internedString = StringInterner::instance().intern(s);
-    return Value(new Obj(ObjString(internedString)));
+    return {new Obj(ObjString(internedString))};
 }
-void ByteCompiler::emitConstant(Value value) { emitBytes(cast(OP_CODE::CONSTANT), makeConstant(value)); }
+void ByteCompiler::emitConstant(const Value value) { emitBytes(cast(OP_CODE::CONSTANT), makeConstant(value)); }

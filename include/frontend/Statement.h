@@ -37,8 +37,8 @@ public:
     bool isConst;
     int line;
 
-    VariableDeclaration(const Token& name, std::unique_ptr<Expression> initializer, bool isConst, int line)
-        : name(name)
+    VariableDeclaration(Token name, std::unique_ptr<Expression> initializer, bool isConst, int line)
+        : name(std::move(name))
         , initializer(std::move(initializer))
         , isConst(isConst)
         , line(line)
@@ -103,7 +103,7 @@ public:
         std::unique_ptr<Expression> condition,
         std::unique_ptr<Expression> increment,
         std::unique_ptr<Statement> body,
-        int line)
+        const int line)
         : initializer(std::move(initializer))
         , condition(std::move(condition))
         , increment(std::move(increment))
@@ -119,8 +119,8 @@ public:
     std::unique_ptr<Expression> value;
     int line;
 
-    ReturnStatement(const Token& keyword, std::unique_ptr<Expression> value, int line)
-        : keyword(keyword)
+    ReturnStatement(Token  keyword, std::unique_ptr<Expression> value, int line)
+        : keyword(std::move(keyword))
         , value(std::move(value))
         , line(line)
     {
@@ -132,8 +132,9 @@ public:
     Token keyword;
     int line;
 
-    BreakStatement(const Token& keyword, int line)
-        : keyword(keyword)
+    BreakStatement(Token keyword, const int
+        line)
+        : keyword(std::move(keyword))
         , line(line)
     {
     }
@@ -144,8 +145,8 @@ public:
     Token keyword;
     int line;
 
-    ContinueStatement(const Token& keyword, int line)
-        : keyword(keyword)
+    ContinueStatement(Token  keyword, int line)
+        : keyword(std::move(keyword))
         , line(line)
     {
     }
@@ -158,8 +159,8 @@ public:
     std::unique_ptr<Statement> body;
     int line;
 
-    FunctionDeclaration(const Token& name, std::vector<Token> parameters, std::unique_ptr<Statement> body, int line)
-        : name(name)
+    FunctionDeclaration(Token name, std::vector<Token> parameters, std::unique_ptr<Statement> body, const int line)
+        : name(std::move(name))
         , parameters(std::move(parameters))
         , body(std::move(body))
         , line(line)
@@ -190,7 +191,7 @@ class Statement {
 public:
     std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as;
 
-    Statement(std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as)
+    explicit Statement(std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as)
         : as { std::move(as) }
     {
     }

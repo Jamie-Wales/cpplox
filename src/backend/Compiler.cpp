@@ -189,6 +189,7 @@ int Compiler::resolveLocal(const Token& name, bool currentScopeOnly = false)
     }
     return -1;
 }
+
 void Compiler::block()
 {
     while (!check(Tokentype::RIGHTBRACE) && !check(Tokentype::EOF_TOKEN)) {
@@ -287,11 +288,11 @@ void Compiler::function()
     }
 }
 
-int Compiler::addUpValue(uint8_t index, bool isLocal)
+int Compiler::addUpValue(const uint8_t index, const bool isLocal)
 {
     size_t& count = currentFunction()->upValueCount;
     for (size_t i = 0; i < count; i++) {
-        Upvalue& val = upvalues[i];
+        const Upvalue& val = upvalues[i];
         if (val.index == index && val.isLocal == isLocal)
             return i;
     }
@@ -304,26 +305,22 @@ int Compiler::resolveUpValue(const Token& name)
     if (functions.size() == 1) {
         return -1;
     }
-    int local = resolveLocal(name);
-    if (local != -1) {
+    if (const int local = resolveLocal(name); local != -1) {
         return addUpValue(local, true);
     }
 
-    int upvalue = resolveUpValue(name);
-    if (upvalue != -1) {
+    if (const int upvalue = resolveUpValue(name); upvalue != -1) {
         return addUpValue(upvalue, false);
     }
 
     return -1;
 }
 
-Value Compiler::makeFunction(ObjFunction* function)
-{
+Value Compiler::makeFunction(ObjFunction* function) const {
     function->upValueCount = upvalues.size();
     return { new Obj(ObjFunction(*function)) };
 }
-ObjFunction* Compiler::currentFunction()
-{
+ObjFunction* Compiler::currentFunction() const {
     return functions.back();
 }
 

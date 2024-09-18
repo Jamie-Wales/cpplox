@@ -36,7 +36,7 @@ int Chunk::disassembleJump(const std::string& name, int sign, int offset) const
     return offset + 3;
 }
 
-void Chunk::writeChunk(const uint8_t byte, int line)
+void Chunk::writeChunk(const uint8_t byte, const int line)
 {
     code.push_back(byte);
     lines.push_back({ static_cast<int>(code.size() - 1), line });

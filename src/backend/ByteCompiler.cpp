@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#define DEBUG_PRINT_CODE
 
 void ByteCompiler::pushFunction(const Token& name)
 {
@@ -51,6 +52,8 @@ void ByteCompiler::compile(Statement& stmt)
                        throw std::runtime_error("Undefined Statement");
                    } },
         stmt.as);
+
+    currentLine = stmt.line;
 }
 
 void ByteCompiler::compileExpressionStatement(const ExpressionStatement& e)
@@ -67,18 +70,21 @@ void ByteCompiler::compilePrintStatment(const PrintStatement& p)
 
 void ByteCompiler::compileVariableDeclaration(const VariableDeclaration& v)
 {
+    uint8_t index = 0;
     auto variable = scopeManager.declareVariable(v.name, v.isConst);
+    if (variable.type == ScopeManager::Variable::Type::Global) {
 
+        if (variable.type == ScopeManager::Variable::Type::Global) {
+            index = identifierConstant(v.name);
+        }
+    }
     if (v.initializer) {
         compile(*v.initializer);
     } else {
         emitByte(cast(OP_CODE::NIL));
     }
+    emitBytes(cast(OP_CODE::DEFINE_GLOBAL), index);
     scopeManager.markInitialized(variable);
-    if (variable.type == ScopeManager::Variable::Type::Global) {
-        uint8_t index = identifierConstant(v.name);
-        emitBytes(cast(OP_CODE::DEFINE_GLOBAL), index);
-    }
 }
 
 void ByteCompiler::compileBlockStatement(const BlockStatement& b)
@@ -92,7 +98,6 @@ void ByteCompiler::compileBlockStatement(const BlockStatement& b)
 
 void ByteCompiler::compileIfStatement(const IfStatement& i)
 {
-
     compile(*i.condition);
     const int thenJump = emitJump(cast(OP_CODE::JUMP_IF_FALSE));
     emitByte(cast(OP_CODE::POP));
@@ -185,14 +190,13 @@ void ByteCompiler::compileContinueStatment(const ContinueStatement& c)
 void ByteCompiler::compileFunctionDeclaration(const FunctionDeclaration& f)
 {
     auto variable = scopeManager.declareVariable(f.name, false);
-    markInitialized(variable);
-
+    const uint8_t global = identifierConstant(f.name);
     function(f);
-
     if (variable.type == ScopeManager::Variable::Type::Global) {
-        const uint8_t global = identifierConstant(f.name);
         emitBytes(cast(OP_CODE::DEFINE_GLOBAL), global);
     }
+
+    markInitialized(variable);
 }
 Value ByteCompiler::makeFunction(ObjFunction* function)
 {
@@ -210,6 +214,7 @@ void ByteCompiler::function(const FunctionDeclaration& f)
         markInitialized(variable);
     }
 
+    currentFunction()->arity = f.parameters.size();
     compile(*f.body);
     const auto compiledFunction = endCompiler();
     emitBytes(cast(OP_CODE::CLOSURE), makeConstant(makeFunction(compiledFunction)));
@@ -265,13 +270,13 @@ void ByteCompiler::compile(Expression& expr)
                    [this](const IncrementExpression& i) { compilePrePostfix(i); },
                    [this](const CallExpression& c) { compileCall(c); } },
         expr.as);
+    currentLine = expr.line;
 }
-
 void ByteCompiler::compilePrePostfix(const IncrementExpression& i)
 {
     const auto variable = scopeManager.resolveVariable(i.name);
     if (!variable) {
-        error("Undefined variable '" + i.name.lexeme + "'.");
+        error(std::format("Undefined variable for Increment Expression {} '{}'", i.name.line, i.name.lexeme));
         return;
     }
 
@@ -325,7 +330,13 @@ void ByteCompiler::compileVariable(const VariableExpression& v)
         error("Undefined variable '" + v.name.lexeme + "'.");
         return;
     }
-    emitGetVariable(*variable);
+
+    if (variable->type == ScopeManager::Variable::Type::Global) {
+        uint8_t index = identifierConstant(v.name);
+        emitBytes(cast(OP_CODE::GET_GLOBAL), index);
+    } else {
+        emitGetVariable(*variable);
+    }
 }
 
 void ByteCompiler::compileUnary(const UnaryExpression& u)
@@ -333,10 +344,10 @@ void ByteCompiler::compileUnary(const UnaryExpression& u)
     compile(*u.operand);
     switch (u.operatorToken.type) {
     case Tokentype::MINUS:
-        emitByte(static_cast<uint8_t>(OP_CODE::NEG));
+        emitByte(cast(OP_CODE::NEG));
         break;
     case Tokentype::BANG:
-        emitByte(static_cast<uint8_t>(OP_CODE::NOT));
+        emitByte(cast(OP_CODE::NOT));
         break;
     default:
         throw std::logic_error("ERROR: No other Unary types");
@@ -349,34 +360,34 @@ void ByteCompiler::compileBinary(const BinaryExpression& b)
     compile(*b.right);
     switch (const Tokentype operatorType = b.operatorToken.type) {
     case Tokentype::PLUS:
-        emitByte(static_cast<uint8_t>(OP_CODE::ADD));
+        emitByte(cast(OP_CODE::ADD));
         break;
     case Tokentype::MINUS:
-        emitBytes(static_cast<uint8_t>(OP_CODE::NEG), static_cast<uint8_t>(OP_CODE::ADD));
+        emitBytes(cast(OP_CODE::NEG), cast(OP_CODE::ADD));
         break;
     case Tokentype::STAR:
-        emitByte(static_cast<uint8_t>(OP_CODE::MULT));
+        emitByte(cast(OP_CODE::MULT));
         break;
     case Tokentype::SLASH:
-        emitByte(static_cast<uint8_t>(OP_CODE::DIV));
+        emitByte(cast(OP_CODE::DIV));
         break;
     case Tokentype::BANG_EQUAL:
-        emitBytes(static_cast<uint8_t>(OP_CODE::EQUAL), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::EQUAL), cast(OP_CODE::NOT));
         break;
     case Tokentype::EQUAL_EQUAL:
-        emitByte(static_cast<uint8_t>(OP_CODE::EQUAL));
+        emitByte(cast(OP_CODE::EQUAL));
         break;
     case Tokentype::GREATER:
-        emitByte(static_cast<uint8_t>(OP_CODE::GREATER));
+        emitByte(cast(OP_CODE::GREATER));
         break;
     case Tokentype::GREATER_EQUAL:
-        emitBytes(static_cast<uint8_t>(OP_CODE::LESS), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::LESS), cast(OP_CODE::NOT));
         break;
     case Tokentype::LESS:
-        emitByte(static_cast<uint8_t>(OP_CODE::LESS));
+        emitByte(cast(OP_CODE::LESS));
         break;
     case Tokentype::LESS_EQUAL:
-        emitBytes(static_cast<uint8_t>(OP_CODE::GREATER), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
         break;
     default:
         throw std::logic_error("invalid binary operator");
@@ -389,28 +400,27 @@ void ByteCompiler::compileLogical(const LogicalExpression& l)
     compile(*l.right);
     switch (const Tokentype operatorType = l.operatorToken.type) {
     case Tokentype::AND:
-        emitBytes(static_cast<uint8_t>(OP_CODE::EQUAL), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::EQUAL), cast(OP_CODE::NOT));
         break;
     case Tokentype::EQUAL_EQUAL:
-        emitByte(static_cast<uint8_t>(OP_CODE::EQUAL));
+        emitByte(cast(OP_CODE::EQUAL));
         break;
     case Tokentype::GREATER:
-        emitByte(static_cast<uint8_t>(OP_CODE::GREATER));
+        emitByte(cast(OP_CODE::GREATER));
         break;
     case Tokentype::GREATER_EQUAL:
-        emitBytes(static_cast<uint8_t>(OP_CODE::LESS), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::LESS), cast(OP_CODE::NOT));
         break;
     case Tokentype::LESS:
-        emitByte(static_cast<uint8_t>(OP_CODE::LESS));
+        emitByte(cast(OP_CODE::LESS));
         break;
     case Tokentype::LESS_EQUAL:
-        emitBytes(static_cast<uint8_t>(OP_CODE::GREATER), static_cast<uint8_t>(OP_CODE::NOT));
+        emitBytes(cast(OP_CODE::GREATER), cast(OP_CODE::NOT));
         break;
     default:
         throw std::logic_error("Invalid binary operator");
     }
 }
-
 void ByteCompiler::compileAssignment(const AssignmentExpression& a)
 {
     const auto variable = scopeManager.resolveVariable(a.name);
@@ -419,14 +429,16 @@ void ByteCompiler::compileAssignment(const AssignmentExpression& a)
         return;
     }
 
-    if (variable->isReadOnly) {
-        error("Cannot assign to const variable '" + a.name.lexeme + "'.");
-        return;
-    }
-
     compile(*a.value);
-    emitSetVariable(*variable);
+
+    if (variable->type == ScopeManager::Variable::Type::Global) {
+        uint8_t index = identifierConstant(a.name);
+        emitBytes(cast(OP_CODE::SET_GLOBAL), index);
+    } else {
+        emitSetVariable(*variable);
+    }
 }
+
 void ByteCompiler::compileCall(const CallExpression& c)
 {
     compile(*c.callee);
@@ -457,7 +469,7 @@ ObjFunction* ByteCompiler::endCompiler()
 
 void ByteCompiler::emitByte(const uint8_t byte) const
 {
-    currentChunk().writeChunk(byte, 0); // Use 0 as a placeholder for line number, or implement a different line tracking mechanism
+    currentChunk().writeChunk(byte, currentLine);
 }
 
 void ByteCompiler::emitBytes(const uint8_t byte1, const uint8_t byte2) const
@@ -524,9 +536,16 @@ uint8_t ByteCompiler::makeConstant(const Value value)
     return static_cast<uint8_t>(constant);
 }
 
-uint8_t ByteCompiler::identifierConstant(const Token& name)
+uint8_t ByteCompiler::identifierConstant(const Token& token)
 {
-    return makeConstant(makeString(name.lexeme));
+    const auto constant = makeString(token.lexeme);
+    Value indexValue;
+    const auto it = stringConstants.find(constant.to_string());
+    if (it == stringConstants.end()) {
+        stringConstants[token.lexeme] = emitConstant(constant);
+        return stringConstants[token.lexeme];
+    }
+    return it->second;
 }
 
 void ByteCompiler::errorAt(const Token& token, const std::string& message)
@@ -549,7 +568,6 @@ void ByteCompiler::defineVariable(uint8_t global)
         markInitialized();
         return;
     }
-
     emitBytes(cast(OP_CODE::DEFINE_GLOBAL), global);
 }
 
@@ -658,4 +676,8 @@ Value ByteCompiler::makeString(const std::string& s)
     const std::string* internedString = StringInterner::instance().intern(s);
     return { new Obj(ObjString(internedString)) };
 }
-void ByteCompiler::emitConstant(const Value value) { emitBytes(cast(OP_CODE::CONSTANT), makeConstant(value)); }
+
+int ByteCompiler::emitConstant(const Value& value) const
+{
+    return currentChunk().writeConstant(value, currentLine);
+}

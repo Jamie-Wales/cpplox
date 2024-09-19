@@ -21,7 +21,8 @@ void ScopeManager::markInitialized()
     }
 }
 
-void ScopeManager::markInitialized(Variable& variable) const {
+void ScopeManager::markInitialized(Variable& variable) const
+{
     if (!scopes.empty() && variable.type == Variable::Type::Local) {
         variable.depth = scopes.size() - 1;
     }
@@ -35,7 +36,7 @@ bool ScopeManager::isGlobal(const std::string& name) const
 ScopeManager::Variable ScopeManager::declareVariable(const Token& name, bool isReadOnly)
 {
     if (scopes.empty()) {
-        globals[name.lexeme] = { name, Variable::Type::Global, static_cast<uint8_t>(globals.size()), isReadOnly, 0 };
+        globals[name.lexeme] = { name, Variable::Type::Global, 0, isReadOnly, 0 };
         return globals[name.lexeme];
     }
     auto& currentScope = scopes.back();
@@ -62,7 +63,6 @@ std::optional<ScopeManager::Variable> ScopeManager::resolveVariable(const Token&
             return upvalue;
         }
     }
-
 
     return std::nullopt;
 }

@@ -122,7 +122,7 @@ ObjUpvalue* vMachine::captureUpvalue(Value* local)
         upvalue = upvalue->next;
     }
 
-    if (upvalue != NULL && upvalue->location == local) {
+    if (upvalue != nullptr && upvalue->location == local) {
         return upvalue;
     }
     auto* createdUpvalue = new ObjUpvalue { local };
@@ -155,7 +155,6 @@ void vMachine::run()
             switch (byte) {
             case cast(OP_CODE::CALL): {
                 int argCount = readByte();
-
                 if (!callValue(stack[stack.size() - 1 - argCount - offset()], argCount)) {
                     return;
                 }
@@ -193,10 +192,10 @@ void vMachine::run()
             }
             case cast(OP_CODE::RETURN): {
                 Value result = stack.back();
-                stack.resize(frames.back().stackOffset);
+                stack.resize(frames.back().stackOffset - 1);
                 closeUpvalues(&stack[frames.back().stackOffset - 1]);
                 frames.pop_back();
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     stack.push_back(result);
                     return;
                 }
@@ -249,28 +248,26 @@ void vMachine::run()
             case cast(OP_CODE::DEFINE_GLOBAL): {
                 auto name = readConstant();
                 auto value = stack.back();
-                auto internedString = StringInterner::instance().find(name.to_string());
-                if (!internedString) {
+                if (auto internedString = StringInterner::instance().find(name.to_string()); !internedString) {
                     std::cerr << "Failed to intern string: " << name.to_string() << std::endl;
                 } else {
                     if (globals.contains(*internedString)) {
                         runtimeError(std::format("Cannot redefine previously defined variable {}", *internedString));
                     }
                     globals[*internedString] = value;
+                    stack.pop_back();
                 }
             } break;
             case cast(OP_CODE::SET_GLOBAL): {
                 auto name = readConstant();
                 globals[name.to_string()] = stack.back();
-                stack.pop_back();
-                stack.pop_back();
                 break;
             }
             case cast(OP_CODE::GET_GLOBAL): {
                 auto name = readConstant();
                 auto it = globals.find(name.to_string());
                 if (it == globals.end()) {
-                    runtimeError(std::format("Undefined variable {}.", name.to_string()));
+                    runtimeError(std::format("wUndefined variable {}.", name.to_string()));
                 }
                 stack.push_back(it->second);
             } break;
@@ -459,7 +456,7 @@ void vMachine::call(ObjFunction* function, int argCount)
     CallFrame callFrame {
         function,
         0,
-        stack.size() - 1 - argCount - 1,
+        stack.size() - argCount - 1,
         nullptr
     };
     frames.push_back(callFrame);
@@ -479,7 +476,7 @@ void vMachine::call(ObjClosure* closure, int argCount)
     CallFrame callFrame {
         nullptr,
         0,
-        stack.size() - 1 - argCount - 1,
+        stack.size() - argCount - 1,
         closure
     };
     frames.push_back(callFrame);

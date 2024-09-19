@@ -32,7 +32,7 @@ public:
 
     void enterScope(bool isClosure = false);
     void exitScope();
-    Variable declareVariable(const Token& name, bool isReadOnly);
+    Variable declareVariable(const Token &name, bool isReadOnly);
     void markInitialized();
     void markInitialized(Variable& variable) const;
     std::optional<Variable> resolveVariable(const Token& name);

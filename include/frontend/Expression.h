@@ -111,8 +111,8 @@ public:
     std::unique_ptr<Expression> element;
     Token tokenOperator;
     bool postFix;
-    IncrementExpression(Token  name, std::unique_ptr<Expression> element, const Token& tokenOperator, bool postFix)
-        : name {std::move( name )}
+    IncrementExpression(Token name, std::unique_ptr<Expression> element, const Token& tokenOperator, bool postFix)
+        : name { std::move(name) }
         , element { std::move(element) }
         , tokenOperator { tokenOperator }
         , postFix { postFix }
@@ -125,6 +125,7 @@ public:
     std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression, IncrementExpression> as;
     int line;
 
-    explicit Expression(std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression, IncrementExpression> as)
-        : as { std::move(as) } {};
+    explicit Expression(std::variant<LiteralExpression, VariableExpression, UnaryExpression, BinaryExpression, AssignmentExpression, LogicalExpression, CallExpression, IncrementExpression> as, int line)
+        : as { std::move(as) }
+        , line { line } {};
 };

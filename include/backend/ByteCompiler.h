@@ -60,6 +60,8 @@ private:
     void compileLogical(const LogicalExpression& l);
     void compileCall(const CallExpression& c);
     void compilePrePostfix(const IncrementExpression& i);
+    int currentLine = 0;
+    std::unordered_map<std::string, int> stringConstants;
 
     /* ------ Helper functions ------*/
     void function(const FunctionDeclaration& f);
@@ -84,7 +86,8 @@ private:
     [[nodiscard]] Chunk& currentChunk() const;
     [[nodiscard]] ObjFunction* currentFunction();
     Value makeString(const std::string& s);
-    void emitConstant(Value value);
+
+    int emitConstant(const Value &value) const;
 
     /* ------ Error handling ------*/
 

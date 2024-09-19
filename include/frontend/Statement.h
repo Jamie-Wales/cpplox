@@ -119,7 +119,7 @@ public:
     std::unique_ptr<Expression> value;
     int line;
 
-    ReturnStatement(Token  keyword, std::unique_ptr<Expression> value, int line)
+    ReturnStatement(Token keyword, std::unique_ptr<Expression> value, int line)
         : keyword(std::move(keyword))
         , value(std::move(value))
         , line(line)
@@ -132,8 +132,7 @@ public:
     Token keyword;
     int line;
 
-    BreakStatement(Token keyword, const int
-        line)
+    BreakStatement(Token keyword, const int line)
         : keyword(std::move(keyword))
         , line(line)
     {
@@ -145,7 +144,7 @@ public:
     Token keyword;
     int line;
 
-    ContinueStatement(Token  keyword, int line)
+    ContinueStatement(Token keyword, int line)
         : keyword(std::move(keyword))
         , line(line)
     {
@@ -190,9 +189,10 @@ public:
 class Statement {
 public:
     std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as;
-
-    explicit Statement(std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as)
+    int line;
+    explicit Statement(std::variant<ExpressionStatement, PrintStatement, VariableDeclaration, BlockStatement, IfStatement, WhileStatement, ForStatement, ReturnStatement, BreakStatement, ContinueStatement, FunctionDeclaration, SwitchStatement> as, int line)
         : as { std::move(as) }
+        , line { line }
     {
     }
 };

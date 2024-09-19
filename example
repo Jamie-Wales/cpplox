@@ -1,6 +1,8 @@
-for (let i = 0; i < 10; i++) {
-        print("hello")
+fn adding() {
+    fn apple() {
+            print("apple")
+        }
+    apple();
 }
 
-
-print("world")
+adding();
